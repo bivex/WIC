@@ -369,15 +369,17 @@ class WindowManager: ObservableObject {
         let rows = Int(ceil(Double(count) / Double(columns)))
         Logger.shared.debug("Grid: \(columns)x\(rows)")
         
-        // Добавляем отступы от краёв (10px для надёжности)
-        let padding: CGFloat = 10
+        // Используем настраиваемый отступ из настроек
+        let padding = snapSettings.gridPadding
+        let bottomExtraPadding: CGFloat = 20 // Дополнительный отступ снизу для Dock
+        
         let usableFrame = CGRect(
             x: frame.minX + padding,
-            y: frame.minY + padding,
+            y: frame.minY + padding + bottomExtraPadding,
             width: frame.width - padding * 2,
-            height: frame.height - padding * 2
+            height: frame.height - padding * 2 - bottomExtraPadding
         )
-        Logger.shared.debug("Added \(padding)px padding, usable area: \(usableFrame)")
+        Logger.shared.debug("Added \(padding)px padding + \(bottomExtraPadding)px bottom, usable area: \(usableFrame)")
         
         let windowWidth = usableFrame.width / CGFloat(columns)
         let windowHeight = usableFrame.height / CGFloat(rows)

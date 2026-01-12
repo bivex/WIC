@@ -113,6 +113,7 @@ struct SnapSettings {
     var isEnabled: Bool = true
     var snapThreshold: CGFloat = 20 // Пиксели от края экрана
     var animationDuration: Double = 0.2
+    var gridPadding: CGFloat = 10 // Отступ сетки от краёв экрана
 }
 
 /// Информация о дисплее

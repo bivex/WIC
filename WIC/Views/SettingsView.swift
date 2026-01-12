@@ -189,6 +189,7 @@ struct SnapSettingsView: View {
     @EnvironmentObject var windowManager: WindowManager
     @State private var snapEnabled = true
     @State private var snapThreshold: Double = 20
+    @State private var gridPadding: Double = 10
     
     var body: some View {
         Form {
@@ -208,6 +209,14 @@ struct SnapSettingsView: View {
                         Slider(value: $snapThreshold, in: 10...50, step: 5)
                             .onChange(of: snapThreshold) { newValue in
                                 windowManager.snapSettings.snapThreshold = newValue
+                            }
+                    }
+                    
+                    VStack(alignment: .leading) {
+                        Text("Отступ сетки от краёв: \(Int(gridPadding)) пикселей")
+                        Slider(value: $gridPadding, in: 5...30, step: 5)
+                            .onChange(of: gridPadding) { newValue in
+                                windowManager.snapSettings.gridPadding = newValue
                             }
                     }
                     
@@ -241,6 +250,7 @@ struct SnapSettingsView: View {
         .onAppear {
             snapEnabled = windowManager.snapSettings.isEnabled
             snapThreshold = windowManager.snapSettings.snapThreshold
+            gridPadding = windowManager.snapSettings.gridPadding
         }
     }
 }
