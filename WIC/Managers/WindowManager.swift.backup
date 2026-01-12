@@ -1,0 +1,371 @@
+//
+//  WindowManager.swift
+//  WIC
+//
+//  Менеджер для управления окнами
+//
+
+import Foundation
+import AppKit
+import Combine
+
+class WindowManager: ObservableObject {
+    static let shared = WindowManager()
+    
+    @Published var snapSettings = SnapSettings()
+    @Published var currentDisplays: [DisplayInfo] = []
+    @Published var autoLayoutEnabled = false
+    @Published var autoLayoutStyle: AutoLayoutStyle = .balanced
+    
+    private var displayReconfigurationCallback: (() -> Void)?
+    private var windowObserver: Any?
+    private var mouseMonitor: Any?
+    private var isDragging = false
+    
+    private init() {
+        updateDisplays()
+        setupDisplayReconfigurationCallback()
+        setupMouseTracking()
+    }
+    
+    // MARK: - Display Management
+    
+    private func updateDisplays() {
+        currentDisplays = DisplayInfo.getAllDisplays()
+    }
+    
+    private func setupDisplayReconfigurationCallback() {
+        // Отслеживание изменений конфигурации дисплеев
+        let callback: CGDisplayReconfigurationCallBack = { _, _, _ in
+            DispatchQueue.main.async {
+                WindowManager.shared.updateDisplays()
+            }
+        }
+        
+        CGDisplayRegisterReconfigurationCallback(callback, nil)
+    }
+    
+    // MARK: - Window Manipulation
+    
+    func snapWindow(to position: WindowPosition) {
+        guard let window = getFrontmostWindow() else { return }
+        guard let screen = NSScreen.main else { return }
+        
+        let targetFrame = position.calculateFrame(for: screen)
+        setWindowFrame(window, to: targetFrame)
+    }
+    
+    func centerWindow() {
+        snapWindow(to: .center)
+    }
+    
+    func maximizeWindow() {
+        snapWindow(to: .maximize)
+    }
+    
+    func moveWindowToDisplay(_ displayIndex: Int) {
+        guard displayIndex < currentDisplays.count else { return }
+        guard let window = getFrontmostWindow() else { return }
+        
+        let display = currentDisplays[displayIndex]
+        let targetScreen = NSScreen.screens.first { screen in
+            screen.frame.intersects(display.frame)
+        }
+        
+        guard let screen = targetScreen else { return }
+        
+        // Переместить окно на центр нового дисплея
+        let visibleFrame = screen.visibleFrame
+        let currentSize = getWindowSize(window)
+        
+        let targetFrame = CGRect(
+            x: visibleFrame.midX - currentSize.width / 2,
+            y: visibleFrame.midY - currentSize.height / 2,
+            width: currentSize.width,
+            height: currentSize.height
+        )
+        
+        setWindowFrame(window, to: targetFrame)
+    }
+    
+    // MARK: - Auto-Snap Functionality
+    
+    private func setupMouseTracking() {
+        guard snapSettings.isEnabled else { return }
+        
+        // Мониторинг движения мыши для auto-snap
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged, .leftMouseUp]) { [weak self] event in
+            guard let self = self else { return }
+            
+            if event.type == .leftMouseDragged {
+                self.isDragging = true
+                self.handleWindowDrag(at: event.locationInWindow)
+            } else if event.type == .leftMouseUp && self.isDragging {
+                self.isDragging = false
+                self.handleWindowDragEnd(at: NSEvent.mouseLocation)
+            }
+        }
+    }
+    
+    private func handleWindowDrag(at location: CGPoint) {
+        // Проверка, находится ли окно близко к краю экрана
+        // Показать превью позиции
+    }
+    
+    private func handleWindowDragEnd(at location: CGPoint) {
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(location) }) else { return }
+        
+        let visibleFrame = screen.visibleFrame
+        let threshold = snapSettings.snapThreshold
+        
+        // Проверить, близко ли курсор к краям экрана
+        var targetPosition: WindowPosition?
+        
+        // Левый край
+        if location.x - visibleFrame.minX < threshold {
+            targetPosition = .leftHalf
+        }
+        // Правый край
+        else if visibleFrame.maxX - location.x < threshold {
+            targetPosition = .rightHalf
+        }
+        // Верхний край
+        else if visibleFrame.maxY - location.y < threshold {
+            // Проверить углы
+            if location.x - visibleFrame.minX < threshold * 2 {
+                targetPosition = .topLeftQuarter
+            } else if visibleFrame.maxX - location.x < threshold * 2 {
+                targetPosition = .topRightQuarter
+            } else {
+                targetPosition = .topHalf
+            }
+        }
+        // Нижний край
+        else if location.y - visibleFrame.minY < threshold {
+            // Проверить углы
+            if location.x - visibleFrame.minX < threshold * 2 {
+                targetPosition = .bottomLeftQuarter
+            } else if visibleFrame.maxX - location.x < threshold * 2 {
+                targetPosition = .bottomRightQuarter
+            } else {
+                targetPosition = .bottomHalf
+            }
+        }
+        
+        if let position = targetPosition {
+            snapWindow(to: position)
+        }
+    }
+    
+    // MARK: - Accessibility Helper Methods
+    
+    private func getFrontmostWindow() -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedApp: CFTypeRef?
+        
+        let result = AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedApplicationAttribute as CFString,
+            &focusedApp
+        )
+        
+        guard result == .success, let app = focusedApp else { return nil }
+        
+        var focusedWindow: CFTypeRef?
+        let windowResult = AXUIElementCopyAttributeValue(
+            app as! AXUIElement,
+            kAXFocusedWindowAttribute as CFString,
+            &focusedWindow
+        )
+        
+        guard windowResult == .success else { return nil }
+        
+        return (focusedWindow as! AXUIElement)
+    }
+    
+    private func setWindowFrame(_ window: AXUIElement, to frame: CGRect) {
+        // Установить позицию
+        var position = CGPoint(x: frame.origin.x, y: frame.origin.y)
+        let positionValue = AXValueCreate(.cgPoint, &position)
+        AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, positionValue!)
+        
+        // Установить размер
+        var size = CGSize(width: frame.size.width, height: frame.size.height)
+        let sizeValue = AXValueCreate(.cgSize, &size)
+        AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue!)
+    }
+    
+    private func getWindowSize(_ window: AXUIElement) -> CGSize {
+        var sizeValue: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(
+            window,
+            kAXSizeAttribute as CFString,
+            &sizeValue
+        )
+        
+        guard result == .success,
+              let value = sizeValue,
+              AXValueGetType(value as! AXValue) == .cgSize else {
+            return CGSize(width: 800, height: 600) // Размер по умолчанию
+        }
+        
+        var size = CGSize.zero
+        AXValueGetValue(value as! AXValue, .cgSize, &size)
+        return size
+    }
+    
+    // MARK: - Layout Presets
+    
+    func saveCurrentLayout(name: String) {
+    // MARK: - Layout Presets (simplified)
+    
+    func saveCurrentLayout(name: String) {
+        // TODO: Implement layout saving
+    }
+    
+    func restoreLayout(name: String) {
+        // TODO: Implement layout restoration
+    }
+    
+    // MARK: - Auto-Layout Functions
+    
+    func applyAutoLayout() {
+        let allWindows = AccessibilityHelper.getAllWindows()
+        let visibleWindows = allWindows.compactMap { AccessibilityHelper.getWindowInfo($0) }
+            .filter { $0.frame.width > 100 && $0.frame.height > 100 }
+        
+        guard !visibleWindows.isEmpty, let screen = NSScreen.main else { return }
+        
+        switch autoLayoutStyle {
+        case .balanced:
+            applyBalancedLayout(windows: visibleWindows, on: screen)
+        case .focused:
+            applyFocusedLayout(windows: visibleWindows, on: screen)
+        case .grid:
+            applyGridLayout(windows: visibleWindows, on: screen)
+        case .cascade:
+            applyCascadeLayout(windows: visibleWindows, on: screen)
+        }
+    }
+    
+    private func applyBalancedLayout(windows: [WindowInfo], on screen: NSScreen) {
+        let count = windows.count
+        let visibleFrame = screen.visibleFrame
+        
+        switch count {
+        case 1:
+            _ = AccessibilityHelper.setWindowFrame(windows[0].element, to: visibleFrame)
+        case 2:
+            let leftFrame = CGRect(x: visibleFrame.minX, y: visibleFrame.minY,
+                                  width: visibleFrame.width / 2, height: visibleFrame.height)
+            let rightFrame = CGRect(x: visibleFrame.minX + visibleFrame.width / 2, y: visibleFrame.minY,
+                                   width: visibleFrame.width / 2, height: visibleFrame.height)
+            _ = AccessibilityHelper.setWindowFrame(windows[0].element, to: leftFrame)
+            _ = AccessibilityHelper.setWindowFrame(windows[1].element, to: rightFrame)
+        case 3:
+            let leftFrame = CGRect(x: visibleFrame.minX, y: visibleFrame.minY,
+                                  width: visibleFrame.width / 2, height: visibleFrame.height)
+            let topRightFrame = CGRect(x: visibleFrame.minX + visibleFrame.width / 2, y: visibleFrame.minY + visibleFrame.height / 2,
+                                      width: visibleFrame.width / 2, height: visibleFrame.height / 2)
+            let bottomRightFrame = CGRect(x: visibleFrame.minX + visibleFrame.width / 2, y: visibleFrame.minY,
+                                         width: visibleFrame.width / 2, height: visibleFrame.height / 2)
+            _ = AccessibilityHelper.setWindowFrame(windows[0].element, to: leftFrame)
+            _ = AccessibilityHelper.setWindowFrame(windows[1].element, to: topRightFrame)
+            _ = AccessibilityHelper.setWindowFrame(windows[2].element, to: bottomRightFrame)
+        case 4:
+            for (index, window) in windows.enumerated() {
+                let col = index % 2
+                let row = index / 2
+                let frame = CGRect(
+                    x: visibleFrame.minX + CGFloat(col) * visibleFrame.width / 2,
+                    y: visibleFrame.minY + CGFloat(row) * visibleFrame.height / 2,
+                    width: visibleFrame.width / 2,
+                    height: visibleFrame.height / 2
+                )
+                _ = AccessibilityHelper.setWindowFrame(window.element, to: frame)
+            }
+        default:
+            applyGridLayout(windows: windows, on: screen)
+        }
+    }
+    
+    private func applyFocusedLayout(windows: [WindowInfo], on screen: NSScreen) {
+        guard !windows.isEmpty else { return }
+        let visibleFrame = screen.visibleFrame
+        
+        // Главное окно занимает 2/3 экрана
+        let mainFrame = CGRect(x: visibleFrame.minX, y: visibleFrame.minY,
+                              width: visibleFrame.width * 2 / 3, height: visibleFrame.height)
+        _ = AccessibilityHelper.setWindowFrame(windows[0].element, to: mainFrame)
+        
+        // Остальные окна делят оставшуюся 1/3
+        let sideWindows = Array(windows.dropFirst())
+        let sideWidth = visibleFrame.width / 3
+        let sideX = visibleFrame.minX + visibleFrame.width * 2 / 3
+        
+        for (index, window) in sideWindows.enumerated() {
+            let height = visibleFrame.height / CGFloat(sideWindows.count)
+            let frame = CGRect(x: sideX, y: visibleFrame.minY + height * CGFloat(index),
+                              width: sideWidth, height: height)
+            _ = AccessibilityHelper.setWindowFrame(window.element, to: frame)
+        }
+    }
+    
+    private func applyGridLayout(windows: [WindowInfo], on screen: NSScreen) {
+        let count = windows.count
+        let visibleFrame = screen.visibleFrame
+        
+        let cols = Int(ceil(sqrt(Double(count))))
+        let rows = Int(ceil(Double(count) / Double(cols)))
+        
+        let cellWidth = visibleFrame.width / CGFloat(cols)
+        let cellHeight = visibleFrame.height / CGFloat(rows)
+        
+        for (index, window) in windows.enumerated() {
+            let col = index % cols
+            let row = index / cols
+            let frame = CGRect(
+                x: visibleFrame.minX + CGFloat(col) * cellWidth,
+                y: visibleFrame.minY + CGFloat(row) * cellHeight,
+                width: cellWidth,
+                height: cellHeight
+            )
+            _ = AccessibilityHelper.setWindowFrame(window.element, to: frame)
+        }
+    }
+    
+    private func applyCascadeLayout(windows: [WindowInfo], on screen: NSScreen) {
+        let visibleFrame = screen.visibleFrame
+        let offset: CGFloat = 30
+        let windowWidth = visibleFrame.width * 0.6
+        let windowHeight = visibleFrame.height * 0.7
+        
+        for (index, window) in windows.enumerated() {
+            let x = visibleFrame.minX + CGFloat(index) * offset
+            let y = visibleFrame.maxY - windowHeight - CGFloat(index) * offset
+            let frame = CGRect(x: x, y: y, width: windowWidth, height: windowHeight)
+            _ = AccessibilityHelper.setWindowFrame(window.element, to: frame)
+        }
+    }
+    
+    func startAutoLayoutMonitoring() {
+        guard autoLayoutEnabled else { return }
+        // Мониторинг открытия новых окон для автоматического применения раскладки
+    }
+    
+    func stopAutoLayoutMonitoring() {
+        // Остановить мониторинг
+    }
+    
+    private func loadLayoutsFromUserDefaults() {
+        // Implementation
+    }
+    
+    private func saveAutoLayoutSettings() {
+        // Implementation
+    }
+    
+    private func loadAutoLayoutSettings() {
+        // Implementation
+    }
+}
