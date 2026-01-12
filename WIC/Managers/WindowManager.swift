@@ -363,13 +363,25 @@ class WindowManager: ObservableObject {
     
     private func applyGridLayout(windows: [AXUIElement], in frame: CGRect) {
         Logger.shared.debug("Applying grid layout to \(windows.count) windows")
+        Logger.shared.debug("Using visibleFrame (excludes Dock/MenuBar): \(frame)")
         let count = windows.count
         let columns = Int(ceil(sqrt(Double(count))))
         let rows = Int(ceil(Double(count) / Double(columns)))
         Logger.shared.debug("Grid: \(columns)x\(rows)")
         
-        let windowWidth = frame.width / CGFloat(columns)
-        let windowHeight = frame.height / CGFloat(rows)
+        // Добавляем отступы от краёв (10px для надёжности)
+        let padding: CGFloat = 10
+        let usableFrame = CGRect(
+            x: frame.minX + padding,
+            y: frame.minY + padding,
+            width: frame.width - padding * 2,
+            height: frame.height - padding * 2
+        )
+        Logger.shared.debug("Added \(padding)px padding, usable area: \(usableFrame)")
+        
+        let windowWidth = usableFrame.width / CGFloat(columns)
+        let windowHeight = usableFrame.height / CGFloat(rows)
+        Logger.shared.debug("Each window size: \(windowWidth) x \(windowHeight)")
         
         // Batch process windows in groups to reduce memory pressure
         let batchSize = 5
@@ -384,11 +396,17 @@ class WindowManager: ObservableObject {
                     let row = globalIndex / columns
                     
                     let windowFrame = CGRect(
-                        x: frame.minX + CGFloat(col) * windowWidth,
-                        y: frame.minY + CGFloat(row) * windowHeight,
+                        x: usableFrame.minX + CGFloat(col) * windowWidth,
+                        y: usableFrame.minY + CGFloat(row) * windowHeight,
                         width: windowWidth,
                         height: windowHeight
                     )
+                    
+                    #if DEBUG
+                    if globalIndex == 0 {
+                        Logger.shared.debug("First window frame: \(windowFrame)")
+                    }
+                    #endif
                     
                     AccessibilityHelper.setWindowFrame(window, to: windowFrame)
                 }
