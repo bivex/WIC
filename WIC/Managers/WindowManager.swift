@@ -344,6 +344,24 @@ class WindowManager: ObservableObject {
             applyLinearRelaxationLayout(windows: windows, in: visibleFrame)
         case .constraintSimplex:
             applyConstraintSimplexLayout(windows: windows, in: visibleFrame)
+        
+        // Premium Work Modes
+        case .videoConferenceMode:
+            applyVideoConferenceModeLayout(windows: windows, in: visibleFrame)
+        case .dataAnalysisMode:
+            applyDataAnalysisModeLayout(windows: windows, in: visibleFrame)
+        case .contentCreationMode:
+            applyContentCreationModeLayout(windows: windows, in: visibleFrame)
+        case .tradingMode:
+            applyTradingModeLayout(windows: windows, in: visibleFrame)
+        case .gamingStreamingMode:
+            applyGamingStreamingModeLayout(windows: windows, in: visibleFrame)
+        case .learningMode:
+            applyLearningModeLayout(windows: windows, in: visibleFrame)
+        case .projectManagementMode:
+            applyProjectManagementModeLayout(windows: windows, in: visibleFrame)
+        case .monitoringMode:
+            applyMonitoringModeLayout(windows: windows, in: visibleFrame)
             }
             
             timer.end()
@@ -1352,6 +1370,512 @@ class WindowManager: ObservableObject {
         }
         
         Logger.shared.debug("Simplex layout complete")
+    }
+    
+    // MARK: - Premium Work Modes (Professional Layouts)
+    
+    /// Video Conference Mode: Optimal layout for video calls
+    /// Main video window (70%) + chat/notes sidebar (30%)
+    private func applyVideoConferenceModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Video Conference Pro layout")
+        
+        if windows.count == 1 {
+            // Single window - center it with optimal video ratio (16:9)
+            let optimalHeight = frame.width * 0.6 * (9.0/16.0)
+            let centeredFrame = CGRect(
+                x: frame.midX - (frame.width * 0.6) / 2,
+                y: frame.midY - optimalHeight / 2,
+                width: frame.width * 0.6,
+                height: optimalHeight
+            )
+            AccessibilityHelper.setWindowFrame(windows[0], to: centeredFrame)
+        } else {
+            // Main video (70%) + sidebar windows (30%)
+            let mainWidth = frame.width * 0.7
+            let sidebarWidth = frame.width * 0.3
+            
+            // Main video window
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: mainWidth,
+                height: frame.height
+            ))
+            
+            // Sidebar windows (chat, notes, etc.)
+            let sidebarWindows = Array(windows[1...])
+            let windowHeight = frame.height / CGFloat(sidebarWindows.count)
+            
+            for (index, window) in sidebarWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + mainWidth,
+                    y: frame.minY + CGFloat(index) * windowHeight,
+                    width: sidebarWidth,
+                    height: windowHeight
+                ))
+            }
+        }
+    }
+    
+    /// Data Analysis Mode: Studio layout for data scientists
+    /// Tables (40%) + Charts (35%) + Code/Scripts (25%)
+    private func applyDataAnalysisModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Data Analysis Studio layout")
+        
+        if windows.count == 1 {
+            // Single window - full screen for main analysis
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // Main analysis (70%) + secondary (30%)
+            let mainWidth = frame.width * 0.7
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: mainWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + mainWidth,
+                y: frame.minY,
+                width: frame.width - mainWidth,
+                height: frame.height
+            ))
+        } else {
+            // Three-panel layout: Tables + Charts + Code
+            let tableWidth = frame.width * 0.4
+            let chartWidth = frame.width * 0.35
+            let codeWidth = frame.width * 0.25
+            
+            // Tables/Data (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: tableWidth,
+                height: frame.height
+            ))
+            
+            // Charts/Visualization (center)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + tableWidth,
+                y: frame.minY,
+                width: chartWidth,
+                height: frame.height
+            ))
+            
+            // Code/Scripts (right)
+            let codeStartX = frame.minX + tableWidth + chartWidth
+            if windows.count == 3 {
+                AccessibilityHelper.setWindowFrame(windows[2], to: CGRect(
+                    x: codeStartX,
+                    y: frame.minY,
+                    width: codeWidth,
+                    height: frame.height
+                ))
+            } else {
+                // Multiple code windows - stack vertically
+                let codeWindows = Array(windows[2...])
+                let codeWindowHeight = frame.height / CGFloat(codeWindows.count)
+                
+                for (index, window) in codeWindows.enumerated() {
+                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                        x: codeStartX,
+                        y: frame.minY + CGFloat(index) * codeWindowHeight,
+                        width: codeWidth,
+                        height: codeWindowHeight
+                    ))
+                }
+            }
+        }
+    }
+    
+    /// Content Creation Mode: Creator workspace
+    /// Editor (50%) + Preview (25%) + Resources (25%)
+    private func applyContentCreationModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Content Creator Suite layout")
+        
+        if windows.count == 1 {
+            // Single window - center with optimal aspect ratio
+            let optimalWidth = frame.width * 0.8
+            let centeredFrame = CGRect(
+                x: frame.midX - optimalWidth / 2,
+                y: frame.minY,
+                width: optimalWidth,
+                height: frame.height
+            )
+            AccessibilityHelper.setWindowFrame(windows[0], to: centeredFrame)
+        } else if windows.count == 2 {
+            // Editor (70%) + Preview (30%)
+            let editorWidth = frame.width * 0.7
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: editorWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + editorWidth,
+                y: frame.minY,
+                width: frame.width - editorWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full creator layout: Editor + Preview + Resources
+            let editorWidth = frame.width * 0.5
+            let previewWidth = frame.width * 0.25
+            let resourceWidth = frame.width * 0.25
+            
+            // Main editor (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: editorWidth,
+                height: frame.height
+            ))
+            
+            // Preview (top right)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + editorWidth,
+                y: frame.minY,
+                width: previewWidth,
+                height: frame.height * 0.6
+            ))
+            
+            // Resources (bottom right)
+            let resourceWindows = Array(windows[2...])
+            let resourceHeight = frame.height * 0.4 / CGFloat(resourceWindows.count)
+            
+            for (index, window) in resourceWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + editorWidth + previewWidth,
+                    y: frame.minY + frame.height * 0.6 + CGFloat(index) * resourceHeight,
+                    width: resourceWidth,
+                    height: resourceHeight
+                ))
+            }
+        }
+    }
+    
+    /// Trading Mode: Professional trading workstation
+    /// Charts (60%) + Terminal (25%) + News/Analytics (15%)
+    private func applyTradingModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Trading Workstation layout")
+        
+        if windows.count == 1 {
+            // Single window - full screen for main chart
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // Charts (75%) + Terminal (25%)
+            let chartWidth = frame.width * 0.75
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: chartWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + chartWidth,
+                y: frame.minY,
+                width: frame.width - chartWidth,
+                height: frame.height
+            ))
+        } else {
+            // Professional trading layout
+            let chartWidth = frame.width * 0.6
+            let terminalWidth = frame.width * 0.25
+            let newsWidth = frame.width * 0.15
+            
+            // Main charts (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: chartWidth,
+                height: frame.height
+            ))
+            
+            // Trading terminal (center)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + chartWidth,
+                y: frame.minY,
+                width: terminalWidth,
+                height: frame.height
+            ))
+            
+            // News/Analytics (right)
+            let newsWindows = Array(windows[2...])
+            let newsHeight = frame.height / CGFloat(newsWindows.count)
+            
+            for (index, window) in newsWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + chartWidth + terminalWidth,
+                    y: frame.minY + CGFloat(index) * newsHeight,
+                    width: newsWidth,
+                    height: newsHeight
+                ))
+            }
+        }
+    }
+    
+    /// Gaming & Streaming Mode: Streamer's dream setup
+    /// Game (70%) + OBS/Stream (20%) + Chat/Donations (10%)
+    private func applyGamingStreamingModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Gaming & Streaming layout")
+        
+        if windows.count == 1 {
+            // Single window - game in center with optimal ratio
+            let gameWidth = frame.width * 0.8
+            let gameHeight = gameWidth * (9.0/16.0)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.midX - gameWidth / 2,
+                y: frame.midY - gameHeight / 2,
+                width: gameWidth,
+                height: min(gameHeight, frame.height * 0.9)
+            ))
+        } else if windows.count == 2 {
+            // Game (80%) + Stream tools (20%)
+            let gameWidth = frame.width * 0.8
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: gameWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + gameWidth,
+                y: frame.minY,
+                width: frame.width - gameWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full streaming setup
+            let gameWidth = frame.width * 0.7
+            let streamWidth = frame.width * 0.2
+            let chatWidth = frame.width * 0.1
+            
+            // Game window (main)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: gameWidth,
+                height: frame.height
+            ))
+            
+            // OBS/Streaming tools
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + gameWidth,
+                y: frame.minY,
+                width: streamWidth,
+                height: frame.height * 0.7
+            ))
+            
+            // Chat/Donations (right column)
+            let chatWindows = Array(windows[2...])
+            let chatStartY = frame.minY + frame.height * 0.7
+            let chatHeight = (frame.height * 0.3) / CGFloat(chatWindows.count)
+            
+            for (index, window) in chatWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + gameWidth + streamWidth,
+                    y: chatStartY + CGFloat(index) * chatHeight,
+                    width: chatWidth,
+                    height: chatHeight
+                ))
+            }
+        }
+    }
+    
+    /// Learning Mode: Educational environment
+    /// Video/Lecture (60%) + Notes (25%) + Additional materials (15%)
+    private func applyLearningModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Learning Environment layout")
+        
+        if windows.count == 1 {
+            // Single window - optimal for video content
+            let videoWidth = frame.width * 0.8
+            let videoHeight = videoWidth * (9.0/16.0)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.midX - videoWidth / 2,
+                y: frame.minY + (frame.height - videoHeight) * 0.3,
+                width: videoWidth,
+                height: min(videoHeight, frame.height * 0.7)
+            ))
+        } else if windows.count == 2 {
+            // Video (70%) + Notes (30%)
+            let videoWidth = frame.width * 0.7
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: videoWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + videoWidth,
+                y: frame.minY,
+                width: frame.width - videoWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full learning setup
+            let videoWidth = frame.width * 0.6
+            let notesWidth = frame.width * 0.25
+            let materialWidth = frame.width * 0.15
+            
+            // Main video/lecture (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: videoWidth,
+                height: frame.height
+            ))
+            
+            // Notes (center)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + videoWidth,
+                y: frame.minY,
+                width: notesWidth,
+                height: frame.height
+            ))
+            
+            // Additional materials (right)
+            let materialWindows = Array(windows[2...])
+            let materialHeight = frame.height / CGFloat(materialWindows.count)
+            
+            for (index, window) in materialWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + videoWidth + notesWidth,
+                    y: frame.minY + CGFloat(index) * materialHeight,
+                    width: materialWidth,
+                    height: materialHeight
+                ))
+            }
+        }
+    }
+    
+    /// Project Management Mode: Command center for project managers
+    /// Kanban (50%) + Calendar (30%) + Communications (20%)
+    private func applyProjectManagementModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Project Command Center layout")
+        
+        if windows.count == 1 {
+            // Single window - kanban/main project view
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // Kanban (65%) + Calendar/Timeline (35%)
+            let kanbanWidth = frame.width * 0.65
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: kanbanWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + kanbanWidth,
+                y: frame.minY,
+                width: frame.width - kanbanWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full project management layout
+            let kanbanWidth = frame.width * 0.5
+            let calendarWidth = frame.width * 0.3
+            let commWidth = frame.width * 0.2
+            
+            // Kanban board (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: kanbanWidth,
+                height: frame.height
+            ))
+            
+            // Calendar/Timeline (center)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + kanbanWidth,
+                y: frame.minY,
+                width: calendarWidth,
+                height: frame.height
+            ))
+            
+            // Communications (right)
+            let commWindows = Array(windows[2...])
+            let commHeight = frame.height / CGFloat(commWindows.count)
+            
+            for (index, window) in commWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + kanbanWidth + calendarWidth,
+                    y: frame.minY + CGFloat(index) * commHeight,
+                    width: commWidth,
+                    height: commHeight
+                ))
+            }
+        }
+    }
+    
+    /// Monitoring Mode: System monitoring and DevOps hub
+    /// Main Dashboard (60%) + Logs (25%) + Alerts/Metrics (15%)
+    private func applyMonitoringModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying System Monitoring Hub layout")
+        
+        if windows.count == 1 {
+            // Single window - main dashboard
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // Dashboard (70%) + Logs (30%)
+            let dashWidth = frame.width * 0.7
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: dashWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + dashWidth,
+                y: frame.minY,
+                width: frame.width - dashWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full monitoring setup
+            let dashWidth = frame.width * 0.6
+            let logsWidth = frame.width * 0.25
+            let alertsWidth = frame.width * 0.15
+            
+            // Main dashboard (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: dashWidth,
+                height: frame.height
+            ))
+            
+            // Logs (center)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + dashWidth,
+                y: frame.minY,
+                width: logsWidth,
+                height: frame.height
+            ))
+            
+            // Alerts/Metrics (right)
+            let alertWindows = Array(windows[2...])
+            let alertHeight = frame.height / CGFloat(alertWindows.count)
+            
+            for (index, window) in alertWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + dashWidth + logsWidth,
+                    y: frame.minY + CGFloat(index) * alertHeight,
+                    width: alertsWidth,
+                    height: alertHeight
+                ))
+            }
+        }
     }
 }
 

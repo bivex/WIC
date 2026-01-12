@@ -229,6 +229,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
     case activeSet = "active_set"
     case linearRelaxation = "linear_relaxation"
     case constraintSimplex = "constraint_simplex"
+    
+    // Premium Work Modes
+    case videoConferenceMode = "video_conference_mode"
+    case dataAnalysisMode = "data_analysis_mode"
+    case contentCreationMode = "content_creation_mode"
+    case tradingMode = "trading_mode"
+    case gamingStreamingMode = "gaming_streaming_mode"
+    case learningMode = "learning_mode"
+    case projectManagementMode = "project_management_mode"
+    case monitoringMode = "monitoring_mode"
 
     var id: String { self.rawValue }
 
@@ -258,6 +268,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
         case .activeSet: return "🔷 Active Set QP"
         case .linearRelaxation: return "〰️ Linear Relaxation"
         case .constraintSimplex: return "📐 Constraint Simplex"
+        
+        // Premium Work Modes
+        case .videoConferenceMode: return "📹 Video Conference Pro"
+        case .dataAnalysisMode: return "📊 Data Analysis Studio"
+        case .contentCreationMode: return "🎬 Content Creator Suite"
+        case .tradingMode: return "📈 Trading Workstation"
+        case .gamingStreamingMode: return "🎮 Gaming & Streaming"
+        case .learningMode: return "📚 Learning Environment"
+        case .projectManagementMode: return "📋 Project Command Center"
+        case .monitoringMode: return "🖥️ System Monitoring Hub"
         }
     }
 
@@ -306,6 +326,24 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Метод Гаусса-Зейделя с релаксацией. Последовательное уточнение позиций окон"
         case .constraintSimplex:
             return "Симплекс-метод линейного программирования. Навигация по вершинам допустимой области"
+        
+        // Premium Work Modes
+        case .videoConferenceMode:
+            return "Оптимальная раскладка для видеоконференций: основное видео (70%) + чат/заметки (30%)"
+        case .dataAnalysisMode:
+            return "Студия анализа данных: таблицы (40%) + графики (35%) + код/скрипты (25%)"
+        case .contentCreationMode:
+            return "Рабочее место создателя контента: редактор (50%) + превью (25%) + ресурсы (25%)"
+        case .tradingMode:
+            return "Торговая станция: графики (60%) + терминал (25%) + новости/аналитика (15%)"
+        case .gamingStreamingMode:
+            return "Стриминг-сетап: игра (70%) + OBS/стрим (20%) + чат/донаты (10%)"
+        case .learningMode:
+            return "Обучающая среда: видео/лекция (60%) + заметки (25%) + доп.материалы (15%)"
+        case .projectManagementMode:
+            return "Центр управления проектами: канбан (50%) + календарь (30%) + коммуникации (20%)"
+        case .monitoringMode:
+            return "Центр мониторинга: главный дашборд (60%) + логи (25%) + алерты/метрики (15%)"
         }
     }
 
@@ -335,6 +373,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
         case .activeSet: return "square.on.square.dashed"
         case .linearRelaxation: return "waveform.path"
         case .constraintSimplex: return "triangle"
+        
+        // Premium Work Modes
+        case .videoConferenceMode: return "video.fill"
+        case .dataAnalysisMode: return "chart.bar.fill"
+        case .contentCreationMode: return "play.rectangle.fill"
+        case .tradingMode: return "chart.line.uptrend.xyaxis"
+        case .gamingStreamingMode: return "gamecontroller.fill"
+        case .learningMode: return "graduationcap.fill"
+        case .projectManagementMode: return "list.bullet.rectangle"
+        case .monitoringMode: return "desktopcomputer"
         }
     }
 
@@ -346,6 +394,8 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Умные режимы"
         case .kaczmarz, .interiorPoint, .activeSet, .linearRelaxation, .constraintSimplex:
             return "Academic Algorithms"
+        case .videoConferenceMode, .dataAnalysisMode, .contentCreationMode, .tradingMode, .gamingStreamingMode, .learningMode, .projectManagementMode, .monitoringMode:
+            return "Premium Work Modes"
         }
     }
 }

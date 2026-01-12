@@ -57,6 +57,30 @@ struct AutoLayoutView: View {
 
                         Divider()
 
+                        // Premium Work Modes
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "star.fill")
+                                    .foregroundColor(.yellow)
+                                Text("Premium Work Modes")
+                                    .font(.headline)
+                                    .foregroundColor(.orange)
+                            }
+                            .padding(.bottom, 4)
+
+                            ForEach(AutoLayoutType.allCases.filter { $0.category == "Premium Work Modes" }) { layoutType in
+                                AutoLayoutOptionCard(
+                                    layoutType: layoutType,
+                                    isSelected: selectedLayout == layoutType,
+                                    action: {
+                                        selectedLayout = layoutType
+                                    }
+                                )
+                            }
+                        }
+
+                        Divider()
+
                         // Базовые режимы
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
