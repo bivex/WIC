@@ -362,6 +362,24 @@ class WindowManager: ObservableObject {
             applyProjectManagementModeLayout(windows: windows, in: visibleFrame)
         case .monitoringMode:
             applyMonitoringModeLayout(windows: windows, in: visibleFrame)
+        
+        // Premium Programming Modes
+        case .fullStackDevMode:
+            applyFullStackDevModeLayout(windows: windows, in: visibleFrame)
+        case .mobileDevMode:
+            applyMobileDevModeLayout(windows: windows, in: visibleFrame)
+        case .devOpsMode:
+            applyDevOpsModeLayout(windows: windows, in: visibleFrame)
+        case .mlAiDevMode:
+            applyMLAIDevModeLayout(windows: windows, in: visibleFrame)
+        case .gameDevMode:
+            applyGameDevModeLayout(windows: windows, in: visibleFrame)
+        case .frontendDevMode:
+            applyFrontendDevModeLayout(windows: windows, in: visibleFrame)
+        case .backendApiMode:
+            applyBackendApiModeLayout(windows: windows, in: visibleFrame)
+        case .desktopAppDevMode:
+            applyDesktopAppDevModeLayout(windows: windows, in: visibleFrame)
             }
             
             timer.end()
@@ -1874,6 +1892,579 @@ class WindowManager: ObservableObject {
                     width: alertsWidth,
                     height: alertHeight
                 ))
+            }
+        }
+    }
+    
+    // MARK: - Premium Programming Modes (Power Developer Layouts)
+    
+    /// Full-Stack Development: Complete web development workstation
+    /// Code (40%) + Frontend Preview (30%) + Terminal/API (20%) + Database/Logs (10%)
+    private func applyFullStackDevModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Full-Stack Development layout")
+        
+        if windows.count == 1 {
+            // Single window - editor with optimal code width
+            let optimalWidth = min(frame.width * 0.8, 1400)
+            let centeredFrame = CGRect(
+                x: frame.midX - optimalWidth / 2,
+                y: frame.minY,
+                width: optimalWidth,
+                height: frame.height
+            )
+            AccessibilityHelper.setWindowFrame(windows[0], to: centeredFrame)
+        } else if windows.count == 2 {
+            // Code (60%) + Preview (40%)
+            let codeWidth = frame.width * 0.6
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: codeWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + codeWidth,
+                y: frame.minY,
+                width: frame.width - codeWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full-stack quad layout
+            let codeWidth = frame.width * 0.4
+            let previewWidth = frame.width * 0.3
+            let terminalWidth = frame.width * 0.2
+            let dbWidth = frame.width * 0.1
+            
+            // Main code editor (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: codeWidth,
+                height: frame.height
+            ))
+            
+            // Frontend preview (center-left)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + codeWidth,
+                y: frame.minY,
+                width: previewWidth,
+                height: frame.height
+            ))
+            
+            // Terminal/API tools (center-right)
+            AccessibilityHelper.setWindowFrame(windows[2], to: CGRect(
+                x: frame.minX + codeWidth + previewWidth,
+                y: frame.minY,
+                width: terminalWidth,
+                height: frame.height
+            ))
+            
+            // Database/Logs (right)
+            if windows.count > 3 {
+                let dbWindows = Array(windows[3...])
+                let dbHeight = frame.height / CGFloat(dbWindows.count)
+                
+                for (index, window) in dbWindows.enumerated() {
+                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                        x: frame.minX + codeWidth + previewWidth + terminalWidth,
+                        y: frame.minY + CGFloat(index) * dbHeight,
+                        width: dbWidth,
+                        height: dbHeight
+                    ))
+                }
+            }
+        }
+    }
+    
+    /// Mobile Development: IDE + Simulator/Emulator workflow
+    /// IDE (50%) + Simulator/Emulator (35%) + Console/Logs (15%)
+    private func applyMobileDevModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Mobile Development Studio layout")
+        
+        if windows.count == 1 {
+            // Single window - IDE centered
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // IDE (65%) + Simulator (35%)
+            let ideWidth = frame.width * 0.65
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: ideWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + ideWidth,
+                y: frame.minY,
+                width: frame.width - ideWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full mobile dev layout
+            let ideWidth = frame.width * 0.5
+            let simWidth = frame.width * 0.35
+            let consoleWidth = frame.width * 0.15
+            
+            // IDE (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: ideWidth,
+                height: frame.height
+            ))
+            
+            // Simulator/Emulator (center) - optimal phone ratio
+            let simHeight = min(frame.height, simWidth * 2.0) // 2:1 ratio for phone
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + ideWidth,
+                y: frame.minY + (frame.height - simHeight) / 2,
+                width: simWidth,
+                height: simHeight
+            ))
+            
+            // Console/Logs (right)
+            let consoleWindows = Array(windows[2...])
+            let consoleHeight = frame.height / CGFloat(consoleWindows.count)
+            
+            for (index, window) in consoleWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + ideWidth + simWidth,
+                    y: frame.minY + CGFloat(index) * consoleHeight,
+                    width: consoleWidth,
+                    height: consoleHeight
+                ))
+            }
+        }
+    }
+    
+    /// DevOps Mode: Infrastructure and operations command center
+    /// Terminals (40%) + Monitoring (30%) + Configs/IaC (20%) + Documentation (10%)
+    private func applyDevOpsModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying DevOps Command Center layout")
+        
+        if windows.count == 1 {
+            // Single terminal - full screen
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // Terminals (60%) + Monitoring (40%)
+            let termWidth = frame.width * 0.6
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: termWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + termWidth,
+                y: frame.minY,
+                width: frame.width - termWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full DevOps layout
+            let termWidth = frame.width * 0.4
+            let monitorWidth = frame.width * 0.3
+            let configWidth = frame.width * 0.2
+            let docWidth = frame.width * 0.1
+            
+            // Terminals (left) - multiple terminal sessions
+            if windows.count >= 2 {
+                let termHeight = frame.height / 2
+                AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                    x: frame.minX,
+                    y: frame.minY,
+                    width: termWidth,
+                    height: termHeight
+                ))
+                AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                    x: frame.minX,
+                    y: frame.minY + termHeight,
+                    width: termWidth,
+                    height: termHeight
+                ))
+            }
+            
+            // Monitoring dashboards (center)
+            if windows.count > 2 {
+                AccessibilityHelper.setWindowFrame(windows[2], to: CGRect(
+                    x: frame.minX + termWidth,
+                    y: frame.minY,
+                    width: monitorWidth,
+                    height: frame.height
+                ))
+            }
+            
+            // Config/IaC files (right)
+            if windows.count > 3 {
+                AccessibilityHelper.setWindowFrame(windows[3], to: CGRect(
+                    x: frame.minX + termWidth + monitorWidth,
+                    y: frame.minY,
+                    width: configWidth,
+                    height: frame.height
+                ))
+            }
+            
+            // Documentation (far right)
+            if windows.count > 4 {
+                let docWindows = Array(windows[4...])
+                let docHeight = frame.height / CGFloat(docWindows.count)
+                
+                for (index, window) in docWindows.enumerated() {
+                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                        x: frame.minX + termWidth + monitorWidth + configWidth,
+                        y: frame.minY + CGFloat(index) * docHeight,
+                        width: docWidth,
+                        height: docHeight
+                    ))
+                }
+            }
+        }
+    }
+    
+    /// ML/AI Development: Data science and machine learning lab
+    /// Jupyter/Code (45%) + Visualization/Plots (35%) + Data/Metrics (20%)
+    private func applyMLAIDevModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying ML/AI Development Lab layout")
+        
+        if windows.count == 1 {
+            // Single notebook - optimal for data science
+            let optimalWidth = frame.width * 0.9
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.midX - optimalWidth / 2,
+                y: frame.minY,
+                width: optimalWidth,
+                height: frame.height
+            ))
+        } else if windows.count == 2 {
+            // Code (55%) + Visualization (45%)
+            let codeWidth = frame.width * 0.55
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: codeWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + codeWidth,
+                y: frame.minY,
+                width: frame.width - codeWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full ML/AI lab
+            let codeWidth = frame.width * 0.45
+            let vizWidth = frame.width * 0.35
+            let dataWidth = frame.width * 0.2
+            
+            // Jupyter/Code (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: codeWidth,
+                height: frame.height
+            ))
+            
+            // Visualization/Plots (center)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + codeWidth,
+                y: frame.minY,
+                width: vizWidth,
+                height: frame.height
+            ))
+            
+            // Data/Metrics (right)
+            let dataWindows = Array(windows[2...])
+            let dataHeight = frame.height / CGFloat(dataWindows.count)
+            
+            for (index, window) in dataWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + codeWidth + vizWidth,
+                    y: frame.minY + CGFloat(index) * dataHeight,
+                    width: dataWidth,
+                    height: dataHeight
+                ))
+            }
+        }
+    }
+    
+    /// Game Development: Game engine and asset pipeline
+    /// Engine/IDE (50%) + Game Preview (30%) + Assets/Inspector (20%)
+    private func applyGameDevModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Game Development Suite layout")
+        
+        if windows.count == 1 {
+            // Single window - game engine
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // Engine (65%) + Preview (35%)
+            let engineWidth = frame.width * 0.65
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: engineWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + engineWidth,
+                y: frame.minY,
+                width: frame.width - engineWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full game dev layout
+            let engineWidth = frame.width * 0.5
+            let previewWidth = frame.width * 0.3
+            let assetsWidth = frame.width * 0.2
+            
+            // Game Engine/IDE (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: engineWidth,
+                height: frame.height
+            ))
+            
+            // Game Preview (center) - maintain aspect ratio
+            let previewHeight = previewWidth * (9.0/16.0) // 16:9 game viewport
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + engineWidth,
+                y: frame.minY,
+                width: previewWidth,
+                height: min(previewHeight, frame.height * 0.7)
+            ))
+            
+            // Assets/Inspector (right)
+            let assetWindows = Array(windows[2...])
+            let assetHeight = frame.height / CGFloat(assetWindows.count)
+            
+            for (index, window) in assetWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + engineWidth + previewWidth,
+                    y: frame.minY + CGFloat(index) * assetHeight,
+                    width: assetsWidth,
+                    height: assetHeight
+                ))
+            }
+        }
+    }
+    
+    /// Frontend Development: Modern web development hub
+    /// Editor (40%) + Browser/Preview (40%) + DevTools (20%)
+    private func applyFrontendDevModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Frontend Development Hub layout")
+        
+        if windows.count == 1 {
+            // Single window - code editor
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // Editor (50%) + Browser (50%)
+            let editorWidth = frame.width * 0.5
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: editorWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + editorWidth,
+                y: frame.minY,
+                width: frame.width - editorWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full frontend layout
+            let editorWidth = frame.width * 0.4
+            let browserWidth = frame.width * 0.4
+            let toolsWidth = frame.width * 0.2
+            
+            // Code Editor (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: editorWidth,
+                height: frame.height
+            ))
+            
+            // Browser/Preview (center)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + editorWidth,
+                y: frame.minY,
+                width: browserWidth,
+                height: frame.height
+            ))
+            
+            // DevTools/Console (right)
+            let toolWindows = Array(windows[2...])
+            let toolHeight = frame.height / CGFloat(toolWindows.count)
+            
+            for (index, window) in toolWindows.enumerated() {
+                AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                    x: frame.minX + editorWidth + browserWidth,
+                    y: frame.minY + CGFloat(index) * toolHeight,
+                    width: toolsWidth,
+                    height: toolHeight
+                ))
+            }
+        }
+    }
+    
+    /// Backend/API Development: Server-side development workshop
+    /// Code (40%) + API Tester (30%) + Database (20%) + Logs/Monitoring (10%)
+    private func applyBackendApiModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Backend/API Workshop layout")
+        
+        if windows.count == 1 {
+            // Single window - code editor
+            AccessibilityHelper.setWindowFrame(windows[0], to: frame)
+        } else if windows.count == 2 {
+            // Code (60%) + API Tester (40%)
+            let codeWidth = frame.width * 0.6
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: codeWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + codeWidth,
+                y: frame.minY,
+                width: frame.width - codeWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full backend workshop
+            let codeWidth = frame.width * 0.4
+            let apiWidth = frame.width * 0.3
+            let dbWidth = frame.width * 0.2
+            let logsWidth = frame.width * 0.1
+            
+            // Code Editor (left)
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: codeWidth,
+                height: frame.height
+            ))
+            
+            // API Tester (center-left)
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + codeWidth,
+                y: frame.minY,
+                width: apiWidth,
+                height: frame.height
+            ))
+            
+            // Database (center-right)
+            if windows.count > 2 {
+                AccessibilityHelper.setWindowFrame(windows[2], to: CGRect(
+                    x: frame.minX + codeWidth + apiWidth,
+                    y: frame.minY,
+                    width: dbWidth,
+                    height: frame.height
+                ))
+            }
+            
+            // Logs/Monitoring (right)
+            if windows.count > 3 {
+                let logWindows = Array(windows[3...])
+                let logHeight = frame.height / CGFloat(logWindows.count)
+                
+                for (index, window) in logWindows.enumerated() {
+                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                        x: frame.minX + codeWidth + apiWidth + dbWidth,
+                        y: frame.minY + CGFloat(index) * logHeight,
+                        width: logsWidth,
+                        height: logHeight
+                    ))
+                }
+            }
+        }
+    }
+    
+    /// Desktop App Development: Native application development
+    /// IDE (45%) + Application/Preview (35%) + Debugger/Profiler (15%) + Documentation (5%)
+    private func applyDesktopAppDevModeLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Desktop App Development layout")
+        
+        if windows.count == 1 {
+            // Single window - IDE with optimal width for desktop development
+            let optimalWidth = min(frame.width * 0.85, 1600)
+            let centeredFrame = CGRect(
+                x: frame.midX - optimalWidth / 2,
+                y: frame.minY,
+                width: optimalWidth,
+                height: frame.height
+            )
+            AccessibilityHelper.setWindowFrame(windows[0], to: centeredFrame)
+        } else if windows.count == 2 {
+            // IDE (60%) + Application Preview (40%)
+            let ideWidth = frame.width * 0.6
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: ideWidth,
+                height: frame.height
+            ))
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + ideWidth,
+                y: frame.minY,
+                width: frame.width - ideWidth,
+                height: frame.height
+            ))
+        } else {
+            // Full desktop app development layout
+            let ideWidth = frame.width * 0.45
+            let appWidth = frame.width * 0.35
+            let debugWidth = frame.width * 0.15
+            let docWidth = frame.width * 0.05
+            
+            // IDE/Editor (left) - main development environment
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX,
+                y: frame.minY,
+                width: ideWidth,
+                height: frame.height
+            ))
+            
+            // Application/Preview (center) - running app or UI preview
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + ideWidth,
+                y: frame.minY,
+                width: appWidth,
+                height: frame.height
+            ))
+            
+            // Debugger/Profiler (center-right)
+            if windows.count > 2 {
+                AccessibilityHelper.setWindowFrame(windows[2], to: CGRect(
+                    x: frame.minX + ideWidth + appWidth,
+                    y: frame.minY,
+                    width: debugWidth,
+                    height: frame.height
+                ))
+            }
+            
+            // Documentation/References (far right)
+            if windows.count > 3 {
+                let docWindows = Array(windows[3...])
+                let docHeight = frame.height / CGFloat(docWindows.count)
+                
+                for (index, window) in docWindows.enumerated() {
+                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                        x: frame.minX + ideWidth + appWidth + debugWidth,
+                        y: frame.minY + CGFloat(index) * docHeight,
+                        width: docWidth,
+                        height: docHeight
+                    ))
+                }
             }
         }
     }

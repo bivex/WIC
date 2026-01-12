@@ -126,6 +126,30 @@ struct AutoLayoutView: View {
                                 )
                             }
                         }
+                        
+                        Divider()
+
+                        // Premium Programming Modes
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                                    .foregroundColor(.blue)
+                                Text("Premium Programming Modes")
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                            }
+                            .padding(.bottom, 4)
+
+                            ForEach(AutoLayoutType.allCases.filter { $0.category == "Premium Programming Modes" }) { layoutType in
+                                AutoLayoutOptionCard(
+                                    layoutType: layoutType,
+                                    isSelected: selectedLayout == layoutType,
+                                    action: {
+                                        selectedLayout = layoutType
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
                 

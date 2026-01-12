@@ -239,6 +239,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
     case learningMode = "learning_mode"
     case projectManagementMode = "project_management_mode"
     case monitoringMode = "monitoring_mode"
+    
+    // Premium Programming Modes
+    case fullStackDevMode = "fullstack_dev_mode"
+    case mobileDevMode = "mobile_dev_mode"
+    case devOpsMode = "devops_mode"
+    case mlAiDevMode = "ml_ai_dev_mode"
+    case gameDevMode = "game_dev_mode"
+    case frontendDevMode = "frontend_dev_mode"
+    case backendApiMode = "backend_api_mode"
+    case desktopAppDevMode = "desktop_app_dev_mode"
 
     var id: String { self.rawValue }
 
@@ -278,6 +288,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
         case .learningMode: return "📚 Learning Environment"
         case .projectManagementMode: return "📋 Project Command Center"
         case .monitoringMode: return "🖥️ System Monitoring Hub"
+        
+        // Premium Programming Modes
+        case .fullStackDevMode: return "⚡ Full-Stack Development"
+        case .mobileDevMode: return "📱 Mobile Development Studio"
+        case .devOpsMode: return "🔧 DevOps Command Center"
+        case .mlAiDevMode: return "🧠 ML/AI Development Lab"
+        case .gameDevMode: return "🎯 Game Development Suite"
+        case .frontendDevMode: return "🎨 Frontend Development Hub"
+        case .backendApiMode: return "⚙️ Backend/API Workshop"
+        case .desktopAppDevMode: return "🖥️ Desktop App Development"
         }
     }
 
@@ -344,6 +364,24 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Центр управления проектами: канбан (50%) + календарь (30%) + коммуникации (20%)"
         case .monitoringMode:
             return "Центр мониторинга: главный дашборд (60%) + логи (25%) + алерты/метрики (15%)"
+        
+        // Premium Programming Modes
+        case .fullStackDevMode:
+            return "Full-Stack рабочая станция: код (40%) + фронтенд превью (30%) + терминал/API (20%) + база/логи (10%)"
+        case .mobileDevMode:
+            return "Мобильная разработка: IDE (50%) + симулятор/эмулятор (35%) + консоль/логи (15%)"
+        case .devOpsMode:
+            return "DevOps центр: терминалы (40%) + мониторинг (30%) + конфиги/IaC (20%) + документация (10%)"
+        case .mlAiDevMode:
+            return "ML/AI лаборатория: Jupyter/код (45%) + визуализация/графики (35%) + данные/метрики (20%)"
+        case .gameDevMode:
+            return "Игровая разработка: движок/IDE (50%) + превью игры (30%) + ассеты/инспектор (20%)"
+        case .frontendDevMode:
+            return "Frontend мастерская: редактор (40%) + браузер/превью (40%) + инструменты разработчика (20%)"
+        case .backendApiMode:
+            return "Backend/API воркшоп: код (40%) + API тестер (30%) + база данных (20%) + логи/мониторинг (10%)"
+        case .desktopAppDevMode:
+            return "Desktop разработка: IDE (45%) + приложение/превью (35%) + отладчик/профайлер (15%) + документация (5%)"
         }
     }
 
@@ -383,6 +421,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
         case .learningMode: return "graduationcap.fill"
         case .projectManagementMode: return "list.bullet.rectangle"
         case .monitoringMode: return "desktopcomputer"
+        
+        // Premium Programming Modes
+        case .fullStackDevMode: return "chevron.left.forwardslash.chevron.right"
+        case .mobileDevMode: return "iphone"
+        case .devOpsMode: return "gearshape.2.fill"
+        case .mlAiDevMode: return "brain.head.profile"
+        case .gameDevMode: return "gamecontroller"
+        case .frontendDevMode: return "paintbrush.pointed.fill"
+        case .backendApiMode: return "server.rack"
+        case .desktopAppDevMode: return "laptopcomputer"
         }
     }
 
@@ -396,6 +444,8 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Academic Algorithms"
         case .videoConferenceMode, .dataAnalysisMode, .contentCreationMode, .tradingMode, .gamingStreamingMode, .learningMode, .projectManagementMode, .monitoringMode:
             return "Premium Work Modes"
+        case .fullStackDevMode, .mobileDevMode, .devOpsMode, .mlAiDevMode, .gameDevMode, .frontendDevMode, .backendApiMode, .desktopAppDevMode:
+            return "Premium Programming Modes"
         }
     }
 }
