@@ -358,15 +358,24 @@ struct AboutSettingsView: View {
             
             HStack(spacing: 15) {
                 Button("GitHub") {
-                    // Открыть ссылку на GitHub
+                    if let url = URL(string: "https://github.com/bivex/WIC") {
+                        NSWorkspace.shared.open(url)
+                    }
                 }
                 .buttonStyle(.bordered)
                 
                 Button("Документация") {
-                    // Открыть документацию
+                    if let url = URL(string: "https://github.com/bivex/WIC/blob/main/README.md") {
+                        NSWorkspace.shared.open(url)
+                    }
                 }
                 .buttonStyle(.bordered)
             }
+            
+            Text("© 2026 WIC. Все права защищены.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding(.top)
         }
         .padding(40)
     }

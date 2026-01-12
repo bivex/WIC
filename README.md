@@ -1,5 +1,7 @@
 # WIC - Advanced Window Manager для macOS
 
+> 🌍 **[English version](README_EN.md)**
+
 <p align="center">
   <img src="https://img.shields.io/badge/platform-macOS-lightgrey.svg" alt="Platform">
   <img src="https://img.shields.io/badge/Swift-5.5+-orange.svg" alt="Swift">
