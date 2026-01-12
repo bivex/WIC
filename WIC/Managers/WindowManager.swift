@@ -222,4 +222,200 @@ class WindowManager: ObservableObject {
         // Восстановить сохраненную раскладку
         // TODO: Реализовать загрузку из UserDefaults
     }
+    
+    // MARK: - Auto Layout
+    
+    /// Получить количество видимых окон
+    func getVisibleWindowsCount() -> Int {
+        return AccessibilityHelper.getAllWindows().count
+    }
+    
+    /// Применить автоматическую раскладку
+    func applyAutoLayout(_ layoutType: AutoLayoutType) {
+        let windows = AccessibilityHelper.getAllWindows()
+        guard !windows.isEmpty else { return }
+        guard let screen = NSScreen.main else { return }
+        
+        let visibleFrame = screen.visibleFrame
+        
+        switch layoutType {
+        case .grid:
+            applyGridLayout(windows: windows, in: visibleFrame)
+        case .horizontal:
+            applyHorizontalLayout(windows: windows, in: visibleFrame)
+        case .vertical:
+            applyVerticalLayout(windows: windows, in: visibleFrame)
+        case .cascade:
+            applyCascadeLayout(windows: windows, in: visibleFrame)
+        case .fibonacci:
+            applyFibonacciLayout(windows: windows, in: visibleFrame)
+        case .focus:
+            applyFocusLayout(windows: windows, in: visibleFrame)
+        }
+    }
+    
+    /// Сбросить все окна в исходное состояние (центрировать)
+    func resetAllWindows() {
+        let windows = AccessibilityHelper.getAllWindows()
+        guard let screen = NSScreen.main else { return }
+        
+        let visibleFrame = screen.visibleFrame
+        let defaultSize = CGSize(width: 800, height: 600)
+        
+        for (index, window) in windows.enumerated() {
+            let offset = CGFloat(index * 30)
+            let frame = CGRect(
+                x: visibleFrame.midX - defaultSize.width / 2 + offset,
+                y: visibleFrame.midY - defaultSize.height / 2 + offset,
+                width: defaultSize.width,
+                height: defaultSize.height
+            )
+            AccessibilityHelper.setWindowFrame(window, to: frame)
+        }
+    }
+    
+    // MARK: - Private Layout Methods
+    
+    private func applyGridLayout(windows: [AXUIElement], in frame: CGRect) {
+        let count = windows.count
+        let columns = Int(ceil(sqrt(Double(count))))
+        let rows = Int(ceil(Double(count) / Double(columns)))
+        
+        let windowWidth = frame.width / CGFloat(columns)
+        let windowHeight = frame.height / CGFloat(rows)
+        
+        for (index, window) in windows.enumerated() {
+            let col = index % columns
+            let row = index / columns
+            
+            let windowFrame = CGRect(
+                x: frame.minX + CGFloat(col) * windowWidth,
+                y: frame.minY + CGFloat(row) * windowHeight,
+                width: windowWidth,
+                height: windowHeight
+            )
+            
+            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+        }
+    }
+    
+    private func applyHorizontalLayout(windows: [AXUIElement], in frame: CGRect) {
+        let windowWidth = frame.width / CGFloat(windows.count)
+        
+        for (index, window) in windows.enumerated() {
+            let windowFrame = CGRect(
+                x: frame.minX + CGFloat(index) * windowWidth,
+                y: frame.minY,
+                width: windowWidth,
+                height: frame.height
+            )
+            
+            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+        }
+    }
+    
+    private func applyVerticalLayout(windows: [AXUIElement], in frame: CGRect) {
+        let windowHeight = frame.height / CGFloat(windows.count)
+        
+        for (index, window) in windows.enumerated() {
+            let windowFrame = CGRect(
+                x: frame.minX,
+                y: frame.minY + CGFloat(index) * windowHeight,
+                width: frame.width,
+                height: windowHeight
+            )
+            
+            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+        }
+    }
+    
+    private func applyCascadeLayout(windows: [AXUIElement], in frame: CGRect) {
+        let baseWidth = min(frame.width * 0.7, 1000)
+        let baseHeight = min(frame.height * 0.7, 700)
+        let offset: CGFloat = 30
+        
+        for (index, window) in windows.enumerated() {
+            let windowFrame = CGRect(
+                x: frame.minX + offset * CGFloat(index),
+                y: frame.maxY - baseHeight - offset * CGFloat(index),
+                width: baseWidth,
+                height: baseHeight
+            )
+            
+            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+        }
+    }
+    
+    private func applyFibonacciLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        
+        // Первое окно занимает большую часть
+        let mainFrame = CGRect(
+            x: frame.minX,
+            y: frame.minY,
+            width: frame.width * 0.618, // Золотое сечение
+            height: frame.height
+        )
+        AccessibilityHelper.setWindowFrame(windows[0], to: mainFrame)
+        
+        // Остальные окна делят оставшееся пространство
+        if windows.count > 1 {
+            let remainingWindows = Array(windows[1...])
+            let sideFrame = CGRect(
+                x: frame.minX + frame.width * 0.618,
+                y: frame.minY,
+                width: frame.width * 0.382,
+                height: frame.height
+            )
+            
+            let windowHeight = sideFrame.height / CGFloat(remainingWindows.count)
+            
+            for (index, window) in remainingWindows.enumerated() {
+                let windowFrame = CGRect(
+                    x: sideFrame.minX,
+                    y: sideFrame.minY + CGFloat(index) * windowHeight,
+                    width: sideFrame.width,
+                    height: windowHeight
+                )
+                AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            }
+        }
+    }
+    
+    private func applyFocusLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        
+        // Главное окно занимает 2/3 слева
+        let mainFrame = CGRect(
+            x: frame.minX,
+            y: frame.minY,
+            width: frame.width * 2 / 3,
+            height: frame.height
+        )
+        AccessibilityHelper.setWindowFrame(windows[0], to: mainFrame)
+        
+        // Остальные окна делят правую треть
+        if windows.count > 1 {
+            let remainingWindows = Array(windows[1...])
+            let sideFrame = CGRect(
+                x: frame.minX + frame.width * 2 / 3,
+                y: frame.minY,
+                width: frame.width / 3,
+                height: frame.height
+            )
+            
+            let windowHeight = sideFrame.height / CGFloat(remainingWindows.count)
+            
+            for (index, window) in remainingWindows.enumerated() {
+                let windowFrame = CGRect(
+                    x: sideFrame.minX,
+                    y: sideFrame.minY + CGFloat(index) * windowHeight,
+                    width: sideFrame.width,
+                    height: windowHeight
+                )
+                AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            }
+        }
+    }
 }
+

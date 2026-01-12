@@ -143,6 +143,22 @@ class HotkeyManager: ObservableObject {
                 modifiers: [.command, .option],
                 action: { WindowManager.shared.maximizeWindow() }
             ),
+            
+            // Автолайаут
+            HotkeyBinding(
+                id: 16,
+                name: "Автолайаут: Сетка",
+                keyCode: UInt16(kVK_ANSI_L),
+                modifiers: [.command, .option],
+                action: { WindowManager.shared.applyAutoLayout(.grid) }
+            ),
+            HotkeyBinding(
+                id: 17,
+                name: "Автолайаут: Фокус",
+                keyCode: UInt16(kVK_ANSI_L),
+                modifiers: [.command, .option, .shift],
+                action: { WindowManager.shared.applyAutoLayout(.focus) }
+            ),
         ]
     }
     

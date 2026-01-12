@@ -1,0 +1,177 @@
+//
+//  AutoLayoutView.swift
+//  WIC
+//
+//  Настройки автоматической раскладки окон
+//
+
+import SwiftUI
+
+struct AutoLayoutView: View {
+    @EnvironmentObject var windowManager: WindowManager
+    @State private var selectedLayout: AutoLayoutType = .grid
+    @State private var windowCount: Int = 0
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Автоматическая раскладка")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("Автоматически расставьте все видимые окна на экране")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Divider()
+            
+            // Выбор типа раскладки
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Выберите тип раскладки:")
+                    .font(.headline)
+                
+                ForEach(AutoLayoutType.allCases) { layoutType in
+                    AutoLayoutOptionCard(
+                        layoutType: layoutType,
+                        isSelected: selectedLayout == layoutType,
+                        action: {
+                            selectedLayout = layoutType
+                        }
+                    )
+                }
+            }
+            
+            Divider()
+            
+            // Предпросмотр и действия
+            VStack(spacing: 12) {
+                HStack {
+                    Image(systemName: "macwindow.on.rectangle")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Найдено окон: \(windowCount)")
+                            .font(.headline)
+                        Text("Будут организованы в формате: \(selectedLayout.displayName)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Button("Обновить") {
+                        updateWindowCount()
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding()
+                .background(Color.secondary.opacity(0.1))
+                .cornerRadius(10)
+                
+                HStack(spacing: 12) {
+                    Button(action: {
+                        windowManager.applyAutoLayout(selectedLayout)
+                    }) {
+                        Label("Применить раскладку", systemImage: "sparkles")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(windowCount == 0)
+                    
+                    Button(action: {
+                        windowManager.resetAllWindows()
+                    }) {
+                        Label("Сбросить", systemImage: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            
+            Divider()
+            
+            // Подсказки
+            VStack(alignment: .leading, spacing: 8) {
+                Text("💡 Подсказки")
+                    .font(.headline)
+                
+                HelpRow(icon: "keyboard", text: "Используйте ⌘⌥L для быстрого вызова автолайаута")
+                HelpRow(icon: "arrow.up.left.and.arrow.down.right", text: "Раскладка применяется ко всем видимым окнам на активном мониторе")
+                HelpRow(icon: "display.2", text: "Для множественных мониторов раскладка применяется к каждому отдельно")
+            }
+            .padding()
+            .background(Color.blue.opacity(0.05))
+            .cornerRadius(10)
+            
+            Spacer()
+        }
+        .padding()
+        .onAppear {
+            updateWindowCount()
+        }
+    }
+    
+    private func updateWindowCount() {
+        windowCount = windowManager.getVisibleWindowsCount()
+    }
+}
+
+struct AutoLayoutOptionCard: View {
+    let layoutType: AutoLayoutType
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 15) {
+                Image(systemName: layoutType.iconName)
+                    .font(.title2)
+                    .foregroundColor(isSelected ? .white : .blue)
+                    .frame(width: 40)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(layoutType.displayName)
+                        .font(.headline)
+                        .foregroundColor(isSelected ? .white : .primary)
+                    
+                    Text(layoutType.description)
+                        .font(.caption)
+                        .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                }
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.white)
+                }
+            }
+            .padding()
+            .background(isSelected ? Color.blue : Color.secondary.opacity(0.1))
+            .cornerRadius(10)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct HelpRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .foregroundColor(.blue)
+                .frame(width: 20)
+            
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+#Preview {
+    AutoLayoutView()
+        .environmentObject(WindowManager.shared)
+        .frame(width: 600, height: 700)
+}

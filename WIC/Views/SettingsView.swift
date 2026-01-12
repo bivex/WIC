@@ -16,6 +16,7 @@ struct SettingsView: View {
     enum SettingsTab: String, CaseIterable {
         case general = "Основные"
         case hotkeys = "Горячие клавиши"
+        case autoLayout = "Автолайаут"
         case snap = "Автоматическое прикрепление"
         case displays = "Дисплеи"
         case about = "О программе"
@@ -34,6 +35,12 @@ struct SettingsView: View {
                     Label("Горячие клавиши", systemImage: "keyboard")
                 }
                 .tag(SettingsTab.hotkeys)
+            
+            AutoLayoutView()
+                .tabItem {
+                    Label("Автолайаут", systemImage: "square.grid.2x2")
+                }
+                .tag(SettingsTab.autoLayout)
             
             SnapSettingsView()
                 .tabItem {

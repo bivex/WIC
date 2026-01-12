@@ -24,7 +24,8 @@ let package = Package(
                 "Managers/HotkeyManager.swift",
                 "Helpers/AccessibilityHelper.swift",
                 "Views/ContentView.swift",
-                "Views/SettingsView.swift"
+                "Views/SettingsView.swift",
+                "Views/AutoLayoutView.swift"
             ]
         )
     ]

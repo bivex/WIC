@@ -147,3 +147,57 @@ struct DisplayInfo: Identifiable {
         return displays
     }
 }
+
+// MARK: - Auto Layout Types
+
+/// Типы автоматической раскладки окон
+enum AutoLayoutType: String, CaseIterable, Identifiable {
+    case grid = "grid"
+    case horizontal = "horizontal"
+    case vertical = "vertical"
+    case cascade = "cascade"
+    case fibonacci = "fibonacci"
+    case focus = "focus"
+    
+    var id: String { self.rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .grid: return "Сетка"
+        case .horizontal: return "Горизонтально"
+        case .vertical: return "Вертикально"
+        case .cascade: return "Каскад"
+        case .fibonacci: return "Фибоначчи"
+        case .focus: return "Фокус"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .grid:
+            return "Равномерная сетка окон на экране"
+        case .horizontal:
+            return "Окна расположены горизонтально друг за другом"
+        case .vertical:
+            return "Окна расположены вертикально одно под другим"
+        case .cascade:
+            return "Окна расположены каскадом с небольшим смещением"
+        case .fibonacci:
+            return "Золотое сечение - одно большое окно, остальные по спирали"
+        case .focus:
+            return "Главное окно занимает 2/3, остальные делят 1/3"
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .grid: return "square.grid.2x2"
+        case .horizontal: return "rectangle.split.3x1"
+        case .vertical: return "rectangle.split.1x2"
+        case .cascade: return "square.stack.3d.up"
+        case .fibonacci: return "square.grid.3x1.folder.badge.plus"
+        case .focus: return "sidebar.left"
+        }
+    }
+}
+
