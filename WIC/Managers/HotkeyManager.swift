@@ -17,8 +17,14 @@ class HotkeyManager: ObservableObject {
     private var registeredHotkeys: [UInt32: EventHotKeyRef] = [:]
     
     private init() {
+        Logger.shared.info("Initializing HotkeyManager")
+        let initTimer = Logger.shared.startOperation("HotkeyManager Init")
+        
         setupDefaultHotkeys()
         registerAllHotkeys()
+        
+        initTimer.end()
+        Logger.shared.info("HotkeyManager initialized with \(hotkeys.count) hotkey(s)")
     }
     
     deinit {
@@ -165,12 +171,17 @@ class HotkeyManager: ObservableObject {
     // MARK: - Hotkey Registration
     
     private func registerAllHotkeys() {
+        Logger.shared.debug("Registering hotkeys...")
+        var successCount = 0
         for hotkey in hotkeys where hotkey.isEnabled {
             registerHotkey(hotkey)
+            successCount += 1
         }
+        Logger.shared.info("Registered \(successCount) hotkey(s)")
     }
     
     private func registerHotkey(_ hotkey: HotkeyBinding) {
+        Logger.shared.debug("Registering hotkey: \(hotkey.name)")
         let hotkeyID = EventHotKeyID(
             signature: OSType(hotkey.id),
             id: UInt32(hotkey.id)

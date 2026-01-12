@@ -16,17 +16,23 @@ let package = Package(
         .executableTarget(
             name: "WIC",
             path: "WIC",
-            exclude: ["Info.plist"],
+            exclude: ["Info.plist", "Managers/WindowManager.swift.backup"],
             sources: [
                 "WICApp.swift",
                 "Models/WindowPosition.swift",
                 "Managers/WindowManager.swift",
                 "Managers/HotkeyManager.swift",
                 "Helpers/AccessibilityHelper.swift",
+                "Helpers/Logger.swift",
                 "Views/ContentView.swift",
                 "Views/SettingsView.swift",
                 "Views/AutoLayoutView.swift"
             ]
+        ),
+        .testTarget(
+            name: "WICTests",
+            dependencies: ["WIC"],
+            path: "Tests"
         )
     ]
 )

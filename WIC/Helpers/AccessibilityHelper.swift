@@ -13,7 +13,9 @@ class AccessibilityHelper {
     // MARK: - Permission Checks
     
     static func checkAccessibilityPermission() -> Bool {
-        return AXIsProcessTrusted()
+        let hasPermission = AXIsProcessTrusted()
+        Logger.shared.debug("Accessibility permission: \(hasPermission ? "granted" : "denied")")
+        return hasPermission
     }
     
     static func requestAccessibilityPermission() {
@@ -23,14 +25,54 @@ class AccessibilityHelper {
     
     // MARK: - Window Information
     
+    /// Список системных приложений, которые нужно пропускать
+    private static let systemAppsToSkip: Set<String> = [
+        "com.apple.systemuiserver",
+        "com.apple.controlcenter",
+        "com.apple.notificationcenterui",
+        "com.apple.dock",
+        "com.apple.WindowManager",
+        "com.apple.loginwindow",
+        "com.apple.Spotlight",
+        "com.apple.finder" // Finder часто создает невидимые окна
+    ]
+    
     static func getAllWindows() -> [AXUIElement] {
+        Logger.shared.debug("Getting all windows...")
+        let timer = Logger.shared.startOperation("Get All Windows")
         var windows: [AXUIElement] = []
         
         guard let runningApps = NSWorkspace.shared.runningApplications as [NSRunningApplication]? else {
+            Logger.shared.warning("Could not get running applications")
             return windows
         }
         
-        for app in runningApps {
+        // Фильтруем приложения для оптимизации
+        let filteredApps = runningApps.filter { app in
+            // Пропускаем системные приложения
+            if let bundleId = app.bundleIdentifier, systemAppsToSkip.contains(bundleId) {
+                return false
+            }
+            
+            // Пропускаем фоновые приложения без UI
+            if app.activationPolicy != .regular {
+                return false
+            }
+            
+            // Пропускаем скрытые приложения
+            if app.isHidden {
+                return false
+            }
+            
+            return true
+        }
+        
+        Logger.shared.debug("Scanning \(filteredApps.count) apps (filtered from \(runningApps.count))")
+        
+        var processedApps = 0
+        var skippedApps = 0
+        
+        for app in filteredApps {
             let appElement = AXUIElementCreateApplication(app.processIdentifier)
             
             var windowList: CFTypeRef?
@@ -41,10 +83,32 @@ class AccessibilityHelper {
             )
             
             if result == .success, let list = windowList as? [AXUIElement] {
-                windows.append(contentsOf: list)
+                // Фильтруем окна: только стандартные видимые окна
+                let validWindows = list.filter { window in
+                    guard let info = getWindowInfo(window) else { return false }
+                    
+                    // Пропускаем слишком маленькие окна (вероятно системные)
+                    if info.frame.width < 100 || info.frame.height < 100 {
+                        return false
+                    }
+                    
+                    // Проверяем что окно на экране
+                    let isOnScreen = NSScreen.screens.contains { screen in
+                        screen.frame.intersects(info.frame)
+                    }
+                    
+                    return isOnScreen
+                }
+                
+                windows.append(contentsOf: validWindows)
+                processedApps += 1
+            } else {
+                skippedApps += 1
             }
         }
         
+        timer.end()
+        Logger.shared.debug("Found \(windows.count) window(s) from \(processedApps) apps (skipped \(skippedApps))")
         return windows
     }
     
@@ -78,7 +142,8 @@ class AccessibilityHelper {
     }
     
     // MARK: - Window Manipulation
-    
+
+    @discardableResult
     static func setWindowPosition(_ window: AXUIElement, to position: CGPoint) -> Bool {
         var point = position
         let positionValue = AXValueCreate(.cgPoint, &point)
@@ -89,7 +154,8 @@ class AccessibilityHelper {
         )
         return result == .success
     }
-    
+
+    @discardableResult
     static func setWindowSize(_ window: AXUIElement, to size: CGSize) -> Bool {
         var windowSize = size
         let sizeValue = AXValueCreate(.cgSize, &windowSize)
@@ -100,7 +166,8 @@ class AccessibilityHelper {
         )
         return result == .success
     }
-    
+
+    @discardableResult
     static func setWindowFrame(_ window: AXUIElement, to frame: CGRect) -> Bool {
         let positionSuccess = setWindowPosition(window, to: frame.origin)
         let sizeSuccess = setWindowSize(window, to: frame.size)

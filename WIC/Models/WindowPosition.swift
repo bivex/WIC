@@ -152,28 +152,51 @@ struct DisplayInfo: Identifiable {
 
 /// Типы автоматической раскладки окон
 enum AutoLayoutType: String, CaseIterable, Identifiable {
+    // Базовые режимы
     case grid = "grid"
     case horizontal = "horizontal"
     case vertical = "vertical"
     case cascade = "cascade"
     case fibonacci = "fibonacci"
     case focus = "focus"
-    
+
+    // Умные режимы (Smart Modes - BookingExpert UI)
+    case readingMode = "reading_mode"
+    case codingMode = "coding_mode"
+    case designMode = "design_mode"
+    case communicationMode = "communication_mode"
+    case researchMode = "research_mode"
+    case presentationMode = "presentation_mode"
+    case multiTaskMode = "multitask_mode"
+    case ultraWideMode = "ultrawide_mode"
+
     var id: String { self.rawValue }
-    
+
     var displayName: String {
         switch self {
+        // Базовые режимы
         case .grid: return "Сетка"
         case .horizontal: return "Горизонтально"
         case .vertical: return "Вертикально"
         case .cascade: return "Каскад"
         case .fibonacci: return "Фибоначчи"
         case .focus: return "Фокус"
+
+        // Умные режимы
+        case .readingMode: return "📖 Режим чтения"
+        case .codingMode: return "💻 Режим кодирования"
+        case .designMode: return "🎨 Режим дизайна"
+        case .communicationMode: return "💬 Режим общения"
+        case .researchMode: return "🔬 Режим исследования"
+        case .presentationMode: return "📊 Режим презентации"
+        case .multiTaskMode: return "⚡ Многозадачность"
+        case .ultraWideMode: return "🖥️ Ультраширокий"
         }
     }
-    
+
     var description: String {
         switch self {
+        // Базовые режимы
         case .grid:
             return "Равномерная сетка окон на экране"
         case .horizontal:
@@ -186,17 +209,55 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Золотое сечение - одно большое окно, остальные по спирали"
         case .focus:
             return "Главное окно занимает 2/3, остальные делят 1/3"
+
+        // Умные режимы
+        case .readingMode:
+            return "Оптимальная ширина для чтения (65-75 символов). Центральное окно идеально для документов, статей, книг"
+        case .codingMode:
+            return "Редактор (60%) + терминал/консоль (40%). Вертикальное разделение для эффективной разработки"
+        case .designMode:
+            return "Большой canvas (70%) + боковая панель инструментов (30%). Идеально для Figma, Photoshop, Sketch"
+        case .communicationMode:
+            return "Видеозвонок (основное окно) + чат/заметки сбоку. Оптимально для встреч и коммуникации"
+        case .researchMode:
+            return "4 окна в квадранты. Идеально для сравнения источников, анализа данных, написания с несколькими ссылками"
+        case .presentationMode:
+            return "Главное окно (презентация/слайды) + вспомогательные заметки внизу. Режим докладчика"
+        case .multiTaskMode:
+            return "Адаптивное распределение по количеству окон. Максимальная эффективность использования пространства"
+        case .ultraWideMode:
+            return "Оптимизация для ультраширокого экрана (21:9, 32:9). Три колонки с основным контентом в центре"
         }
     }
-    
+
     var iconName: String {
         switch self {
+        // Базовые режимы
         case .grid: return "square.grid.2x2"
         case .horizontal: return "rectangle.split.3x1"
         case .vertical: return "rectangle.split.1x2"
         case .cascade: return "square.stack.3d.up"
         case .fibonacci: return "square.grid.3x1.folder.badge.plus"
         case .focus: return "sidebar.left"
+
+        // Умные режимы
+        case .readingMode: return "book.fill"
+        case .codingMode: return "chevron.left.forwardslash.chevron.right"
+        case .designMode: return "paintbrush.fill"
+        case .communicationMode: return "person.2.fill"
+        case .researchMode: return "magnifyingglass.circle.fill"
+        case .presentationMode: return "rectangle.on.rectangle.angled"
+        case .multiTaskMode: return "square.grid.3x3.fill"
+        case .ultraWideMode: return "rectangle.expand.vertical"
+        }
+    }
+
+    var category: String {
+        switch self {
+        case .grid, .horizontal, .vertical, .cascade, .fibonacci, .focus:
+            return "Базовые"
+        case .readingMode, .codingMode, .designMode, .communicationMode, .researchMode, .presentationMode, .multiTaskMode, .ultraWideMode:
+            return "Умные режимы"
         }
     }
 }

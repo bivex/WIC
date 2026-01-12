@@ -28,15 +28,56 @@ struct AutoLayoutView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Выберите тип раскладки:")
                     .font(.headline)
-                
-                ForEach(AutoLayoutType.allCases) { layoutType in
-                    AutoLayoutOptionCard(
-                        layoutType: layoutType,
-                        isSelected: selectedLayout == layoutType,
-                        action: {
-                            selectedLayout = layoutType
+
+                // Группировка по категориям
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Умные режимы (BookingExpert UI)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "brain.head.profile")
+                                    .foregroundColor(.purple)
+                                Text("Умные режимы")
+                                    .font(.headline)
+                                    .foregroundColor(.purple)
+                            }
+                            .padding(.bottom, 4)
+
+                            ForEach(AutoLayoutType.allCases.filter { $0.category == "Умные режимы" }) { layoutType in
+                                AutoLayoutOptionCard(
+                                    layoutType: layoutType,
+                                    isSelected: selectedLayout == layoutType,
+                                    action: {
+                                        selectedLayout = layoutType
+                                    }
+                                )
+                            }
                         }
-                    )
+
+                        Divider()
+
+                        // Базовые режимы
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "square.grid.2x2")
+                                    .foregroundColor(.gray)
+                                Text("Базовые режимы")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.bottom, 4)
+
+                            ForEach(AutoLayoutType.allCases.filter { $0.category == "Базовые" }) { layoutType in
+                                AutoLayoutOptionCard(
+                                    layoutType: layoutType,
+                                    isSelected: selectedLayout == layoutType,
+                                    action: {
+                                        selectedLayout = layoutType
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
             
