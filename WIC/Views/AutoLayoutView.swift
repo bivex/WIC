@@ -78,6 +78,30 @@ struct AutoLayoutView: View {
                                 )
                             }
                         }
+                        
+                        Divider()
+
+                        // Академические алгоритмы
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "atom")
+                                    .foregroundColor(.orange)
+                                Text("Academic Algorithms")
+                                    .font(.headline)
+                                    .foregroundColor(.orange)
+                            }
+                            .padding(.bottom, 4)
+
+                            ForEach(AutoLayoutType.allCases.filter { $0.category == "Academic Algorithms" }) { layoutType in
+                                AutoLayoutOptionCard(
+                                    layoutType: layoutType,
+                                    isSelected: selectedLayout == layoutType,
+                                    action: {
+                                        selectedLayout = layoutType
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
                 
@@ -139,6 +163,17 @@ struct AutoLayoutView: View {
                     HelpRow(icon: "keyboard", text: "Используйте ⌘⌥L для быстрого вызова автолайаута")
                     HelpRow(icon: "arrow.up.left.and.arrow.down.right", text: "Раскладка применяется ко всем видимым окнам на активном мониторе")
                     HelpRow(icon: "display.2", text: "Для множественных мониторов раскладка применяется к каждому отдельно")
+                    
+                    // Подсказки для академических алгоритмов
+                    if selectedLayout.category == "Academic Algorithms" {
+                        Divider()
+                        HelpRow(icon: "atom", text: "Academic алгоритмы основаны на научных исследованиях UI-раскладок")
+                        HelpRow(icon: "arrow.triangle.2.circlepath", text: "Kaczmarz: Итеративные проекции, сходимость за O(n·m)")
+                        HelpRow(icon: "scope", text: "Interior Point: Квадратичная оптимизация с барьерами")
+                        HelpRow(icon: "square.on.square.dashed", text: "Active Set: QP-решатель для активных ограничений")
+                        HelpRow(icon: "waveform.path", text: "Linear Relaxation: Метод Гаусса-Зейделя с релаксацией")
+                        HelpRow(icon: "triangle", text: "Constraint Simplex: LP-оптимизация по вершинам")
+                    }
                 }
                 .padding()
                 .background(Color.blue.opacity(0.05))

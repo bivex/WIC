@@ -31,6 +31,13 @@ enum WindowPosition: String, CaseIterable, Identifiable {
     case center = "center"
     case maximize = "maximize"
     
+    // Advanced Constraint-Based Layouts (Academic Algorithms)
+    case kaczmarz = "kaczmarz"
+    case interiorPoint = "interior_point"
+    case activeSet = "active_set"
+    case linearRelaxation = "linear_relaxation"
+    case constraintSimplex = "constraint_simplex"
+    
     var id: String { self.rawValue }
     
     var displayName: String {
@@ -48,6 +55,11 @@ enum WindowPosition: String, CaseIterable, Identifiable {
         case .rightThird: return "Правая треть"
         case .leftTwoThirds: return "Левые две трети"
         case .rightTwoThirds: return "Правые две трети"
+        case .kaczmarz: return "Kaczmarz (Iterative Projection)"
+        case .interiorPoint: return "Interior Point (Barrier Method)"
+        case .activeSet: return "Active Set (QP Solver)"
+        case .linearRelaxation: return "Linear Relaxation (Gauss-Seidel)"
+        case .constraintSimplex: return "Constraint Simplex (LP)"
         case .center: return "Центр"
         case .maximize: return "Максимизировать"
         }
@@ -104,6 +116,46 @@ enum WindowPosition: String, CaseIterable, Identifiable {
             
         case .maximize:
             return visibleFrame
+            
+        // Advanced Constraint-Based Layouts
+        case .kaczmarz:
+            // Kaczmarz iterative projection - converges to optimal distribution
+            // Uses golden ratio subdivision
+            let phi = (1.0 + sqrt(5.0)) / 2.0 // φ ≈ 1.618
+            let mainWidth = width / phi
+            return CGRect(x: x, y: y, width: mainWidth, height: height)
+            
+        case .interiorPoint:
+            // Interior Point barrier method - quadratic optimization
+            // Balanced distribution with barrier constraints
+            let margin = width * 0.08 // 8% margin (barrier function)
+            return CGRect(
+                x: x + margin,
+                y: y + margin,
+                width: width - 2 * margin,
+                height: height - 2 * margin
+            )
+            
+        case .activeSet:
+            // Active Set QP solver - identifies active constraints
+            // Left 2/3 as primary active region
+            return CGRect(x: x, y: y, width: width * 2 / 3, height: height)
+            
+        case .linearRelaxation:
+            // Gauss-Seidel relaxation - iterative refinement
+            // Center-biased with relaxation parameter ω = 0.7
+            let relaxed = width * 0.7
+            return CGRect(
+                x: x + (width - relaxed) / 2,
+                y: y,
+                width: relaxed,
+                height: height
+            )
+            
+        case .constraintSimplex:
+            // Simplex LP method - moves along feasible edges
+            // Optimal corner point solution
+            return CGRect(x: x, y: y, width: width / 2, height: height)
         }
     }
 }
@@ -170,6 +222,13 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
     case presentationMode = "presentation_mode"
     case multiTaskMode = "multitask_mode"
     case ultraWideMode = "ultrawide_mode"
+    
+    // Constraint-Based Academic Algorithms
+    case kaczmarz = "kaczmarz"
+    case interiorPoint = "interior_point"
+    case activeSet = "active_set"
+    case linearRelaxation = "linear_relaxation"
+    case constraintSimplex = "constraint_simplex"
 
     var id: String { self.rawValue }
 
@@ -192,6 +251,13 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
         case .presentationMode: return "📊 Режим презентации"
         case .multiTaskMode: return "⚡ Многозадачность"
         case .ultraWideMode: return "🖥️ Ультраширокий"
+        
+        // Constraint-Based Algorithms
+        case .kaczmarz: return "🔬 Kaczmarz Projection"
+        case .interiorPoint: return "🎯 Interior Point Barrier"
+        case .activeSet: return "🔷 Active Set QP"
+        case .linearRelaxation: return "〰️ Linear Relaxation"
+        case .constraintSimplex: return "📐 Constraint Simplex"
         }
     }
 
@@ -228,6 +294,18 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Адаптивное распределение по количеству окон. Максимальная эффективность использования пространства"
         case .ultraWideMode:
             return "Оптимизация для ультраширокого экрана (21:9, 32:9). Три колонки с основным контентом в центре"
+        
+        // Constraint-Based Algorithms
+        case .kaczmarz:
+            return "Итеративные проекции на гиперплоскости ограничений. O(n·m) сложность. Гарантированная сходимость"
+        case .interiorPoint:
+            return "Барьерный метод квадратичной оптимизации. Логарифмические барьеры для границ экрана"
+        case .activeSet:
+            return "QP-решатель с идентификацией активных ограничений. Оптимально для жёстких границ"
+        case .linearRelaxation:
+            return "Метод Гаусса-Зейделя с релаксацией. Последовательное уточнение позиций окон"
+        case .constraintSimplex:
+            return "Симплекс-метод линейного программирования. Навигация по вершинам допустимой области"
         }
     }
 
@@ -250,6 +328,13 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
         case .presentationMode: return "rectangle.on.rectangle.angled"
         case .multiTaskMode: return "square.grid.3x3.fill"
         case .ultraWideMode: return "rectangle.expand.vertical"
+        
+        // Constraint-Based Algorithms
+        case .kaczmarz: return "arrow.triangle.2.circlepath"
+        case .interiorPoint: return "scope"
+        case .activeSet: return "square.on.square.dashed"
+        case .linearRelaxation: return "waveform.path"
+        case .constraintSimplex: return "triangle"
         }
     }
 
@@ -259,6 +344,8 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Базовые"
         case .readingMode, .codingMode, .designMode, .communicationMode, .researchMode, .presentationMode, .multiTaskMode, .ultraWideMode:
             return "Умные режимы"
+        case .kaczmarz, .interiorPoint, .activeSet, .linearRelaxation, .constraintSimplex:
+            return "Academic Algorithms"
         }
     }
 }

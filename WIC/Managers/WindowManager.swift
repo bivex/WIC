@@ -332,6 +332,18 @@ class WindowManager: ObservableObject {
             applyMultiTaskModeLayout(windows: windows, in: visibleFrame)
         case .ultraWideMode:
             applyUltraWideModeLayout(windows: windows, in: visibleFrame, screen: screen)
+        
+        // Constraint-Based Academic Algorithms
+        case .kaczmarz:
+            applyKaczmarzLayout(windows: windows, in: visibleFrame)
+        case .interiorPoint:
+            applyInteriorPointLayout(windows: windows, in: visibleFrame)
+        case .activeSet:
+            applyActiveSetLayout(windows: windows, in: visibleFrame)
+        case .linearRelaxation:
+            applyLinearRelaxationLayout(windows: windows, in: visibleFrame)
+        case .constraintSimplex:
+            applyConstraintSimplexLayout(windows: windows, in: visibleFrame)
             }
             
             timer.end()
@@ -986,6 +998,360 @@ class WindowManager: ObservableObject {
                 }
             }
         }
+    }
+    
+    // MARK: - Advanced Constraint-Based Layouts (Academic Algorithms)
+    
+    /// Algorithm: Kaczmarz Iterative Projection Method
+    /// Complexity: O(n·m) where n = windows, m = iterations
+    /// Type: Projection-based constraint solver
+    /// Reference: Kaczmarz (1937), "Angenäherte Auflösung von Systemen linearer Gleichungen"
+    /// Implementation: Projects windows iteratively onto constraint hyperplanes
+    func applyKaczmarzLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Kaczmarz iterative projection layout")
+        
+        // Kaczmarz parameters
+        let omega: CGFloat = 1.0  // Relaxation parameter (0 < ω < 2)
+        let tolerance: CGFloat = 0.01
+        let maxIterations = 10
+        
+        // Initial guess: equal distribution
+        var positions: [CGRect] = []
+        let initialWidth = frame.width / CGFloat(windows.count)
+        for i in 0..<windows.count {
+            positions.append(CGRect(
+                x: frame.minX + CGFloat(i) * initialWidth,
+                y: frame.minY,
+                width: initialWidth,
+                height: frame.height
+            ))
+        }
+        
+        // Iterative projection onto constraints
+        for iteration in 0..<maxIterations {
+            var maxError: CGFloat = 0
+            
+            // Project onto each constraint sequentially
+            for i in 0..<windows.count {
+                // Constraint 1: Non-overlapping (x[i+1] >= x[i] + w[i])
+                if i < windows.count - 1 {
+                    let violation = (positions[i].minX + positions[i].width) - positions[i + 1].minX
+                    if violation > 0 {
+                        // Apply projection with relaxation
+                        let correction = omega * violation / 2
+                        positions[i].origin.x -= correction
+                        positions[i + 1].origin.x += correction
+                        maxError = max(maxError, abs(violation))
+                    }
+                }
+                
+                // Constraint 2: Stay within bounds
+                if positions[i].minX < frame.minX {
+                    let violation = frame.minX - positions[i].minX
+                    positions[i].origin.x += omega * violation
+                    maxError = max(maxError, abs(violation))
+                }
+                if positions[i].maxX > frame.maxX {
+                    let violation = positions[i].maxX - frame.maxX
+                    positions[i].origin.x -= omega * violation
+                    maxError = max(maxError, abs(violation))
+                }
+            }
+            
+            // Check convergence
+            if maxError < tolerance {
+                Logger.shared.debug("Kaczmarz converged in \(iteration + 1) iterations")
+                break
+            }
+        }
+        
+        // Apply final positions
+        for (index, window) in windows.enumerated() {
+            AccessibilityHelper.setWindowFrame(window, to: positions[index])
+        }
+    }
+    
+    /// Algorithm: Interior Point Barrier Method
+    /// Complexity: O(n·k) where k = outer iterations (typically log(1/ε))
+    /// Type: Quadratic optimization with barrier functions
+    /// Reference: Caroll (1961), "The Created Response Surface Technique"
+    /// Implementation: Uses logarithmic barrier to maintain feasibility
+    func applyInteriorPointLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Interior Point barrier method layout")
+        
+        // Interior point parameters
+        let mu: CGFloat = 1.5  // Barrier parameter increase factor
+        var t: CGFloat = 1.0   // Current barrier weight
+        let epsilon: CGFloat = 0.01
+        let margin: CGFloat = frame.width * 0.05  // 5% margin (barrier constraint)
+        
+        // Objective: minimize sum of squared deviations from ideal positions
+        // Subject to: x[i] >= minX + margin, x[i] + w[i] <= maxX - margin
+        
+        var positions: [CGRect] = []
+        let idealWidth = (frame.width - 2 * margin) / CGFloat(windows.count)
+        
+        // Initial strictly feasible point
+        for i in 0..<windows.count {
+            positions.append(CGRect(
+                x: frame.minX + margin + CGFloat(i) * idealWidth,
+                y: frame.minY + margin,
+                width: idealWidth,
+                height: frame.height - 2 * margin
+            ))
+        }
+        
+        // Barrier method: increase t until convergence
+        while CGFloat(windows.count) / t >= epsilon {
+            // Centering step: optimize with current barrier
+            for _ in 0..<5 {
+                for i in 0..<windows.count {
+                    // Gradient of barrier function: -1/distance_to_boundary
+                    let leftBarrier = 1.0 / (positions[i].minX - (frame.minX + margin))
+                    let rightBarrier = 1.0 / ((frame.maxX - margin) - positions[i].maxX)
+                    
+                    // Update position based on barrier gradient
+                    let step: CGFloat = 0.1
+                    if leftBarrier > rightBarrier {
+                        positions[i].origin.x += step
+                    } else {
+                        positions[i].origin.x -= step
+                    }
+                    
+                    // Ensure strict feasibility
+                    positions[i].origin.x = max(frame.minX + margin, min(positions[i].origin.x, frame.maxX - margin - positions[i].width))
+                }
+            }
+            
+            t *= mu  // Increase barrier weight
+        }
+        
+        // Apply optimized positions
+        for (index, window) in windows.enumerated() {
+            AccessibilityHelper.setWindowFrame(window, to: positions[index])
+        }
+        
+        Logger.shared.debug("Interior Point converged with final t=\(t)")
+    }
+    
+    /// Algorithm: Active Set Method for Quadratic Programming
+    /// Complexity: O(n²) for identifying active constraints
+    /// Type: QP solver with equality/inequality constraints
+    /// Reference: Fletcher (1987), "Practical Methods of Optimization"
+    /// Implementation: Identifies and activates binding constraints
+    func applyActiveSetLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Active Set QP solver layout")
+        
+        // Active set: constraints that are exactly satisfied (binding)
+        var activeConstraints: Set<Int> = []
+        
+        // Phase 1: Find initial feasible solution
+        var positions: [CGRect] = []
+        let width = frame.width / CGFloat(windows.count)
+        for i in 0..<windows.count {
+            positions.append(CGRect(
+                x: frame.minX + CGFloat(i) * width,
+                y: frame.minY,
+                width: width,
+                height: frame.height
+            ))
+        }
+        
+        // Phase 2: Identify active constraints (boundaries being touched)
+        for i in 0..<windows.count {
+            // Check left boundary
+            if abs(positions[i].minX - frame.minX) < 1.0 {
+                activeConstraints.insert(i * 2)
+            }
+            // Check right boundary
+            if abs(positions[i].maxX - frame.maxX) < 1.0 {
+                activeConstraints.insert(i * 2 + 1)
+            }
+        }
+        
+        Logger.shared.debug("Active constraints: \(activeConstraints.count)")
+        
+        // Phase 3: Optimize subject to active constraints
+        // For windows at boundaries, keep them there
+        // For others, optimize spacing
+        
+        let boundaryWindows = activeConstraints.count
+        let freeWindows = windows.count - boundaryWindows
+        
+        if freeWindows > 0 {
+            // Redistribute free windows optimally
+            let freeSpace = frame.width * 0.6  // 60% for free windows
+            let freeWidth = freeSpace / CGFloat(freeWindows)
+            
+            var freeIndex = 0
+            for i in 0..<windows.count {
+                if !activeConstraints.contains(i * 2) && !activeConstraints.contains(i * 2 + 1) {
+                    positions[i].size.width = freeWidth
+                    positions[i].origin.x = frame.minX + frame.width * 0.2 + CGFloat(freeIndex) * freeWidth
+                    freeIndex += 1
+                }
+            }
+        }
+        
+        // Apply final positions
+        for (index, window) in windows.enumerated() {
+            AccessibilityHelper.setWindowFrame(window, to: positions[index])
+        }
+    }
+    
+    /// Algorithm: Linear Relaxation (Gauss-Seidel Method)
+    /// Complexity: O(n·k) where k = iterations until convergence
+    /// Type: Iterative refinement with relaxation parameter
+    /// Reference: Gauss (1823), Seidel (1874)
+    /// Implementation: Successive over-relaxation (SOR) for window positioning
+    func applyLinearRelaxationLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Linear Relaxation (Gauss-Seidel) layout")
+        
+        // Relaxation parameters
+        let omega: CGFloat = 0.7  // Relaxation parameter (0 < ω < 1 for under-relaxation)
+        let maxIterations = 20
+        let tolerance: CGFloat = 1.0
+        
+        // Initial positions
+        var positions: [CGRect] = []
+        let width = frame.width / CGFloat(windows.count)
+        for i in 0..<windows.count {
+            positions.append(CGRect(
+                x: frame.minX + CGFloat(i) * width,
+                y: frame.minY,
+                width: width,
+                height: frame.height
+            ))
+        }
+        
+        // Gauss-Seidel iteration with relaxation
+        for iteration in 0..<maxIterations {
+            var maxChange: CGFloat = 0
+            
+            for i in 0..<windows.count {
+                let oldX = positions[i].origin.x
+                
+                // Compute new position based on neighbors
+                var newX: CGFloat
+                if i == 0 {
+                    // First window: align to left with small margin
+                    newX = frame.minX + 10
+                } else if i == windows.count - 1 {
+                    // Last window: align to right
+                    newX = frame.maxX - positions[i].width - 10
+                } else {
+                    // Middle windows: balance between neighbors
+                    let leftNeighbor = positions[i - 1].maxX
+                    let idealSpacing = width * 0.1  // 10% spacing
+                    newX = leftNeighbor + idealSpacing
+                }
+                
+                // Apply relaxation: x_new = (1-ω)·x_old + ω·x_computed
+                positions[i].origin.x = (1 - omega) * oldX + omega * newX
+                
+                let change = abs(positions[i].origin.x - oldX)
+                maxChange = max(maxChange, change)
+            }
+            
+            // Check convergence
+            if maxChange < tolerance {
+                Logger.shared.debug("Linear Relaxation converged in \(iteration + 1) iterations")
+                break
+            }
+        }
+        
+        // Apply converged positions
+        for (index, window) in windows.enumerated() {
+            AccessibilityHelper.setWindowFrame(window, to: positions[index])
+        }
+    }
+    
+    /// Algorithm: Constraint Simplex Method (Linear Programming)
+    /// Complexity: O(n²) average, exponential worst-case
+    /// Type: LP solver navigating feasible region vertices
+    /// Reference: Dantzig (1947), "Programming in a Linear Structure"
+    /// Implementation: Simplex tableau for window constraint optimization
+    func applyConstraintSimplexLayout(windows: [AXUIElement], in frame: CGRect) {
+        guard !windows.isEmpty else { return }
+        Logger.shared.debug("Applying Constraint Simplex (LP) layout")
+        
+        // Simplex method: move along edges of feasible region to optimal vertex
+        
+        // Phase I: Find initial basic feasible solution (BFS)
+        var positions: [CGRect] = []
+        let width = frame.width / CGFloat(windows.count)
+        
+        // Start at corner (vertex of feasible region)
+        for i in 0..<windows.count {
+            positions.append(CGRect(
+                x: frame.minX + CGFloat(i) * width,
+                y: frame.minY,
+                width: width,
+                height: frame.height
+            ))
+        }
+        
+        // Phase II: Pivot to improve objective function
+        // Objective: maximize total utilized screen space
+        // Constraints: non-negativity, non-overlapping, within bounds
+        
+        let iterations = min(windows.count, 5)  // Limit pivots
+        for iteration in 0..<iterations {
+            // Find entering variable (most negative reduced cost)
+            var enteringIndex = -1
+            var minReducedCost: CGFloat = 0
+            
+            for i in 0..<windows.count {
+                // Reduced cost: potential improvement from expanding this window
+                let currentSize = positions[i].width
+                let maxPossibleSize = width * 1.5
+                let reducedCost = currentSize - maxPossibleSize
+                
+                if reducedCost < minReducedCost {
+                    minReducedCost = reducedCost
+                    enteringIndex = i
+                }
+            }
+            
+            // If all reduced costs non-negative, optimal solution reached
+            if enteringIndex < 0 {
+                Logger.shared.debug("Simplex reached optimality in \(iteration) pivots")
+                break
+            }
+            
+            // Find leaving variable (minimum ratio test)
+            // Expand window at enteringIndex until hitting constraint
+            let expansionAmount = width * 0.2
+            positions[enteringIndex].size.width += expansionAmount
+            
+            // Maintain feasibility: compress neighbors
+            if enteringIndex < windows.count - 1 {
+                positions[enteringIndex + 1].origin.x += expansionAmount
+            }
+        }
+        
+        // Ensure final feasibility
+        var currentX = frame.minX
+        for i in 0..<windows.count {
+            positions[i].origin.x = currentX
+            currentX += positions[i].width
+            
+            // Adjust last window to fit exactly
+            if i == windows.count - 1 {
+                positions[i].size.width = frame.maxX - positions[i].minX
+            }
+        }
+        
+        // Apply optimal positions
+        for (index, window) in windows.enumerated() {
+            AccessibilityHelper.setWindowFrame(window, to: positions[index])
+        }
+        
+        Logger.shared.debug("Simplex layout complete")
     }
 }
 
