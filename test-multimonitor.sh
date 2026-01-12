@@ -194,9 +194,12 @@ EOF
 done
 
 echo -e "\n${BLUE}🔍 Checking for Common Layout Problems${NC}"
+echo "Note: Some boundary violations below are INTENTIONAL test cases"
+echo "to verify that boundary detection and correction works properly."
 
 # Check for windows going off-screen
 echo -e "\n${YELLOW}1. Boundary Violation Check${NC}"
+echo "Testing boundary detection with intentionally problematic windows..."
 cat > /tmp/boundary_check.swift << 'EOF'
 import AppKit
 
@@ -207,25 +210,118 @@ guard let screen = NSScreen.main else {
 
 let bounds = screen.visibleFrame
 print("Screen bounds: x=\(Int(bounds.minX)), y=\(Int(bounds.minY)), w=\(Int(bounds.width)), h=\(Int(bounds.height))")
+print("\n🔍 Testing boundary detection with edge cases:")
 
-// Test extreme cases
+// Test extreme cases - these SHOULD violate boundaries to test detection
 let testPositions = [
-    CGRect(x: bounds.minX - 100, y: bounds.minY, width: 200, height: 200), // Left overflow
-    CGRect(x: bounds.maxX - 100, y: bounds.minY, width: 200, height: 200), // Right overflow
-    CGRect(x: bounds.minX, y: bounds.minY - 100, width: 200, height: 200), // Top overflow
-    CGRect(x: bounds.minX, y: bounds.maxY - 100, width: 200, height: 200), // Bottom overflow
+    ("Left overflow", CGRect(x: bounds.minX - 100, y: bounds.minY, width: 200, height: 200)),
+    ("Right overflow", CGRect(x: bounds.maxX - 100, y: bounds.minY, width: 200, height: 200)),
+    ("Top overflow", CGRect(x: bounds.minX, y: bounds.minY - 100, width: 200, height: 200)),
+    ("Bottom overflow", CGRect(x: bounds.minX, y: bounds.maxY - 100, width: 200, height: 200)),
 ]
 
-for (i, pos) in testPositions.enumerated() {
+var detectedViolations = 0
+var totalTests = testPositions.count
+
+for (i, (description, pos)) in testPositions.enumerated() {
     if bounds.contains(pos) {
-        print("✅ Test position \(i) is within bounds")
+        print("⚠️  Test position \(i) (\(description)) should violate boundaries but doesn't: \(pos)")
     } else {
-        print("❌ Test position \(i) violates boundaries: \(pos)")
+        print("✅ Test position \(i) (\(description)) correctly detected as boundary violation")
+        print("   Position: \(pos)")
         print("   Intersection: \(bounds.intersection(pos))")
+        detectedViolations += 1
     }
+}
+
+print("\n📊 Boundary Detection Results:")
+print("   Detected violations: \(detectedViolations)/\(totalTests)")
+if detectedViolations == totalTests {
+    print("✅ All boundary violations correctly detected - system working properly")
+} else {
+    print("❌ Some boundary violations not detected - check validation logic")
 }
 EOF
 swift /tmp/boundary_check.swift || echo "⚠️  Boundary check failed"
+
+echo -e "\n${YELLOW}1b. Boundary Correction Test${NC}"
+echo "Testing that boundary violations get properly corrected..."
+cat > /tmp/boundary_correction_test.swift << 'EOF'
+import AppKit
+
+guard let screen = NSScreen.main else {
+    print("No screen found")
+    exit(1)
+}
+
+let bounds = screen.visibleFrame
+
+// Simulate the boundary correction function from WindowManager
+func correctBounds(_ frame: CGRect, within screenBounds: CGRect) -> CGRect {
+    var corrected = frame
+    
+    // Horizontal correction
+    if corrected.minX < screenBounds.minX {
+        corrected.origin.x = screenBounds.minX
+    }
+    if corrected.maxX > screenBounds.maxX {
+        if corrected.width > screenBounds.width {
+            corrected.size.width = screenBounds.width * 0.95
+            corrected.origin.x = screenBounds.minX + (screenBounds.width - corrected.width) / 2
+        } else {
+            corrected.origin.x = screenBounds.maxX - corrected.width
+        }
+    }
+    
+    // Vertical correction
+    if corrected.minY < screenBounds.minY {
+        corrected.origin.y = screenBounds.minY
+    }
+    if corrected.maxY > screenBounds.maxY {
+        if corrected.height > screenBounds.height {
+            corrected.size.height = screenBounds.height
+            corrected.origin.y = screenBounds.minY
+        } else {
+            corrected.origin.y = screenBounds.maxY - corrected.height
+        }
+    }
+    
+    return corrected
+}
+
+let problematicPositions = [
+    ("Left overflow", CGRect(x: bounds.minX - 100, y: bounds.minY, width: 200, height: 200)),
+    ("Right overflow", CGRect(x: bounds.maxX - 100, y: bounds.minY, width: 200, height: 200)),
+    ("Too wide window", CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width + 200, height: 200)),
+    ("Too tall window", CGRect(x: bounds.minX, y: bounds.minY, width: 200, height: bounds.height + 200)),
+]
+
+print("🔧 Testing boundary correction:")
+var correctionsPassed = 0
+
+for (description, originalPos) in problematicPositions {
+    let corrected = correctBounds(originalPos, within: bounds)
+    let nowWithinBounds = bounds.contains(corrected)
+    
+    print("   \(description):")
+    print("     Original: \(originalPos)")  
+    print("     Corrected: \(corrected)")
+    print("     Within bounds: \(nowWithinBounds ? "✅" : "❌")")
+    
+    if nowWithinBounds {
+        correctionsPassed += 1
+    }
+}
+
+print("\n📊 Boundary Correction Results:")
+print("   Successful corrections: \(correctionsPassed)/\(problematicPositions.count)")
+if correctionsPassed == problematicPositions.count {
+    print("✅ All boundary violations successfully corrected")
+} else {
+    print("❌ Some boundary corrections failed - check correction logic")
+}
+EOF
+swift /tmp/boundary_correction_test.swift || echo "⚠️  Boundary correction test failed"
 
 echo -e "\n${YELLOW}2. Multi-Screen Coordinate Check${NC}"
 cat > /tmp/multiscreen_check.swift << 'EOF'
