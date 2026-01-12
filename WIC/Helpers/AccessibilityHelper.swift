@@ -209,6 +209,45 @@ class AccessibilityHelper {
         }
     }
     
+    /// Get the current frame of a window
+    static func getWindowFrame(_ window: AXUIElement) -> CGRect? {
+        autoreleasepool {
+            var positionValue: CFTypeRef?
+            var sizeValue: CFTypeRef?
+            
+            // Get position
+            let positionResult = AXUIElementCopyAttributeValue(
+                window,
+                kAXPositionAttribute as CFString,
+                &positionValue
+            )
+            
+            // Get size
+            let sizeResult = AXUIElementCopyAttributeValue(
+                window,
+                kAXSizeAttribute as CFString,
+                &sizeValue
+            )
+            
+            guard positionResult == .success,
+                  sizeResult == .success,
+                  let positionValue = positionValue,
+                  let sizeValue = sizeValue else {
+                return nil
+            }
+            
+            var position = CGPoint.zero
+            var size = CGSize.zero
+            
+            guard AXValueGetValue(positionValue as! AXValue, .cgPoint, &position),
+                  AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) else {
+                return nil
+            }
+            
+            return CGRect(origin: position, size: size)
+        }
+    }
+    
     // MARK: - App Information
     
     static func getFocusedApp() -> NSRunningApplication? {
