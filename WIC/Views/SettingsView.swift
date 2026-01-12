@@ -83,7 +83,14 @@ struct GeneralSettingsView: View {
                 HStack {
                     Text("Версия:")
                     Spacer()
-                    Text("1.0.0")
+                    Text("0.0.2")
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack {
+                    Text("Сборка:")
+                    Spacer()
+                    Text("2")
                         .foregroundColor(.secondary)
                 }
             } header: {
@@ -338,9 +345,13 @@ struct AboutSettingsView: View {
                 .font(.title3)
                 .foregroundColor(.secondary)
             
-            Text("Версия 1.0.0")
+            Text("Версия 0.0.2 (Build 2)")
                 .font(.caption)
                 .foregroundColor(.secondary)
+            
+            Text("Professional Window Arrangement Algorithms")
+                .font(.caption2)
+                .foregroundColor(.blue)
             
             Divider()
                 .padding(.vertical)

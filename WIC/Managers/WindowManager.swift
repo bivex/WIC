@@ -361,6 +361,10 @@ class WindowManager: ObservableObject {
     
     // MARK: - Private Layout Methods
     
+    // Algorithm: Rule-based / Greedy Grid Distribution
+    // Complexity: O(n) where n = window count
+    // Type: Equal distribution with mathematical partitioning
+    // Reference: See ALGORITHMS.md for technical details
     private func applyGridLayout(windows: [AXUIElement], in frame: CGRect) {
         Logger.shared.debug("Applying grid layout to \(windows.count) windows")
         Logger.shared.debug("Using visibleFrame (excludes Dock/MenuBar): \(frame)")
@@ -416,6 +420,9 @@ class WindowManager: ObservableObject {
         }
     }
     
+    // Algorithm: Rule-based Linear Horizontal Distribution
+    // Complexity: O(n)
+    // Type: Equal width partitioning
     private func applyHorizontalLayout(windows: [AXUIElement], in frame: CGRect) {
         autoreleasepool {
             let windowWidth = frame.width / CGFloat(windows.count)
@@ -433,6 +440,9 @@ class WindowManager: ObservableObject {
         }
     }
     
+    // Algorithm: Rule-based Linear Vertical Distribution
+    // Complexity: O(n)
+    // Type: Equal height partitioning
     private func applyVerticalLayout(windows: [AXUIElement], in frame: CGRect) {
         autoreleasepool {
             let windowHeight = frame.height / CGFloat(windows.count)
@@ -450,6 +460,10 @@ class WindowManager: ObservableObject {
         }
     }
     
+    // Algorithm: BSP-inspired Cascade with Fixed Offset
+    // Complexity: O(n)
+    // Type: Hierarchical visual stacking
+    // Pattern: Each window offset by 30px for visual hierarchy
     private func applyCascadeLayout(windows: [AXUIElement], in frame: CGRect) {
         let baseWidth = min(frame.width * 0.7, 1000)
         let baseHeight = min(frame.height * 0.7, 700)
@@ -467,6 +481,10 @@ class WindowManager: ObservableObject {
         }
     }
     
+    // Algorithm: Master-Stack with Golden Ratio (φ ≈ 1.618)
+    // Complexity: O(n)
+    // Type: Fibonacci sequence inspired distribution
+    // Math: main = 0.618 × width, stack = 0.382 × width
     private func applyFibonacciLayout(windows: [AXUIElement], in frame: CGRect) {
         guard !windows.isEmpty else { return }
         
@@ -503,6 +521,10 @@ class WindowManager: ObservableObject {
         }
     }
     
+    // Algorithm: Master-Stack 2:1 Ratio
+    // Complexity: O(n)
+    // Type: Primary focus + secondary stack
+    // Pattern: Main window 66% + sidebar 33%
     private func applyFocusLayout(windows: [AXUIElement], in frame: CGRect) {
         guard !windows.isEmpty else { return }
         
