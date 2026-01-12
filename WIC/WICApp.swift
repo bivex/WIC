@@ -135,8 +135,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     
     @objc private func openSettings() {
+        Logger.shared.info("Opening settings window...")
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        
+        // Для SwiftUI Settings используем селектор preferences
+        let result = NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        Logger.shared.debug("Settings action result: \(result)")
+        
+        // Альтернативный способ - симулировать нажатие Cmd+,
+        if !result {
+            Logger.shared.debug("Trying alternative method with keyboard shortcut")
+            let source = CGEventSource(stateID: .hidSystemState)
+            
+            // Cmd + ,
+            if let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x2B, keyDown: true),
+               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x2B, keyDown: false) {
+                keyDown.flags = .maskCommand
+                keyUp.flags = .maskCommand
+                keyDown.post(tap: .cghidEventTap)
+                keyUp.post(tap: .cghidEventTap)
+                Logger.shared.debug("Keyboard shortcut sent")
+            }
+        }
     }
     
     @objc private func snapLeft() {
