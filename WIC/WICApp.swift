@@ -25,108 +25,113 @@ struct WICApp: App {
 }
 
 // MARK: - App Delegate
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusBarItem: NSStatusItem?
-    private var _statusBarMenu: NSMenu?
-    private var _autoLayoutSubmenu: NSMenu?
-    
-    // Lazy menu creation для уменьшения overhead
-    private var statusBarMenu: NSMenu {
-        if _statusBarMenu == nil {
-            _statusBarMenu = createMenu()
-        }
-        return _statusBarMenu!
-    }
-    
-    // Lazy submenu creation
-    private var autoLayoutSubmenu: NSMenu {
-        if _autoLayoutSubmenu == nil {
-            _autoLayoutSubmenu = createAutoLayoutMenu()
-        }
-        return _autoLayoutSubmenu!
-    }
+    private var statusBarMenu: NSMenu?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Logger.shared.info("Application launching...")
-        let launchTimer = Logger.shared.startOperation("Application Launch")
-        
-        // Скрыть иконку в Dock
-        Logger.shared.debug("Setting activation policy to accessory")
-        NSApp.setActivationPolicy(.accessory)
-        
-        // Создать статус-бар меню
-        let menuTimer = Logger.shared.startOperation("Status Bar Setup")
-        setupStatusBarItem()
-        menuTimer.end()
-        
-        // Проверить и запросить разрешения Accessibility
-        Logger.shared.debug("Checking Accessibility permissions")
-        checkAccessibilityPermissions()
-        
-        // Инициализировать менеджеры
-        Logger.shared.info("Initializing managers...")
-        _ = WindowManager.shared
-        _ = HotkeyManager.shared
-        
-        launchTimer.end()
-        Logger.shared.info("Application launch complete")
+        autoreleasepool {
+            Logger.shared.info("Application launching...")
+            let launchTimer = Logger.shared.startOperation("Application Launch")
+            
+            // Скрыть иконку в Dock
+            Logger.shared.debug("Setting activation policy to accessory")
+            NSApp.setActivationPolicy(.accessory)
+            
+            // Создать статус-бар меню (отложенная инициализация)
+            setupStatusBarItem()
+            
+            // Проверить и запросить разрешения Accessibility
+            Logger.shared.debug("Checking Accessibility permissions")
+            checkAccessibilityPermissions()
+            
+            // Инициализировать менеджеры
+            Logger.shared.info("Initializing managers...")
+            _ = WindowManager.shared
+            _ = HotkeyManager.shared
+            
+            launchTimer.end()
+            Logger.shared.info("Application launch complete")
+        }
     }
     
     private func setupStatusBarItem() {
-        statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         
         if let button = statusBarItem?.button {
             // Использовать SF Symbol для иконки
-            button.image = NSImage(systemSymbolName: "rectangle.split.3x3", accessibilityDescription: "WIC")
-            button.image?.isTemplate = true
+            let image = NSImage(systemSymbolName: "rectangle.split.3x3", accessibilityDescription: "WIC")
+            image?.isTemplate = true
+            button.image = image
+            // Оптимизация: использовать action вместо menu для ленивой загрузки
+            button.target = self
+            button.action = #selector(statusBarButtonClicked)
         }
-        
-        // Меню создастся лениво при первом клике
-        statusBarItem?.menu = statusBarMenu
     }
     
-    // Создание auto-layout submenu (lazy)
-    private func createAutoLayoutMenu() -> NSMenu {
-        let menu = NSMenu()
-        menu.autoenablesItems = false // Оптимизация: не проверять enabled автоматически
-        
-        menu.addItem(NSMenuItem(title: "Сетка", action: #selector(applyGridLayout), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Горизонтально", action: #selector(applyHorizontalLayout), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Вертикально", action: #selector(applyVerticalLayout), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Каскад", action: #selector(applyCascadeLayout), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Фибоначчи", action: #selector(applyFibonacciLayout), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Фокус", action: #selector(applyFocusLayout), keyEquivalent: ""))
-        
-        return menu
+    @objc private func statusBarButtonClicked() {
+        autoreleasepool {
+            if statusBarMenu == nil {
+                statusBarMenu = createMenu()
+                statusBarMenu?.delegate = self
+            }
+            statusBarItem?.menu = statusBarMenu
+            statusBarItem?.button?.performClick(nil)
+        }
     }
+    
+    // Очистить меню после закрытия для экономии памяти
+    func menuDidClose(_ menu: NSMenu) {
+        autoreleasepool {
+            // Удалить ссылку на меню после закрытия
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.statusBarItem?.menu = nil
+            }
+        }
+    }
+    
+
     
     // Создание основного меню (вызывается лениво)
     private func createMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.autoenablesItems = false // Оптимизация
-        menu.minimumWidth = 200 // Фиксированная ширина = меньше layout расчетов
+        menu.autoenablesItems = false
+        menu.minimumWidth = 180
         
-        menu.addItem(NSMenuItem(title: "Открыть настройки", action: #selector(openSettings), keyEquivalent: ","))
+        // Только самые используемые пункты
+        let settingsItem = NSMenuItem(title: "Настройки", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         menu.addItem(NSMenuItem.separator())
         
-        // Быстрые действия - только самые используемые
-        menu.addItem(NSMenuItem(title: "Левая половина", action: #selector(snapLeft), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Правая половина", action: #selector(snapRight), keyEquivalent: ""))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Центрировать", action: #selector(center), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Максимизировать", action: #selector(maximize), keyEquivalent: ""))
-        menu.addItem(NSMenuItem.separator())
-        
-        // Автолайаут с lazy submenu
-        let autoLayoutItem = NSMenuItem(title: "Автолайаут", action: nil, keyEquivalent: "")
-        // Submenu создается только при первом открытии
-        autoLayoutItem.submenu = autoLayoutSubmenu
-        menu.addItem(autoLayoutItem)
+        // Быстрые действия
+        addMenuItem(to: menu, title: "← Лево", action: #selector(snapLeft))
+        addMenuItem(to: menu, title: "→ Право", action: #selector(snapRight))
+        addMenuItem(to: menu, title: "↑ Верх", action: #selector(snapTop))
+        addMenuItem(to: menu, title: "↓ Низ", action: #selector(snapBottom))
         menu.addItem(NSMenuItem.separator())
         
-        menu.addItem(NSMenuItem(title: "Выйти", action: #selector(quit), keyEquivalent: "q"))
+        addMenuItem(to: menu, title: "◯ Центр", action: #selector(center))
+        addMenuItem(to: menu, title: "◻ Макс", action: #selector(maximize))
+        menu.addItem(NSMenuItem.separator())
+        
+        // Автолайаут - плоский список (без submenu для снижения overhead)
+        addMenuItem(to: menu, title: "⚏ Сетка", action: #selector(applyGridLayout))
+        addMenuItem(to: menu, title: "⚍ Горизонт", action: #selector(applyHorizontalLayout))
+        addMenuItem(to: menu, title: "⚎ Вертикаль", action: #selector(applyVerticalLayout))
+        menu.addItem(NSMenuItem.separator())
+        
+        let quitItem = NSMenuItem(title: "Выйти", action: #selector(quit), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
         
         return menu
+    }
+    
+    private func addMenuItem(to menu: NSMenu, title: String, action: Selector) {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        menu.addItem(item)
     }
     
     @objc private func openSettings() {

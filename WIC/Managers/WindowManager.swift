@@ -21,7 +21,7 @@ class WindowManager: ObservableObject {
     
     // Кеш для оптимизации
     private var cachedFrontmostWindow: (window: AXUIElement, timestamp: Date)?
-    private let windowCacheDuration: TimeInterval = 0.1 // 100ms кеш
+    private let windowCacheDuration: TimeInterval = 0.5 // 500ms кеш (увеличено для производительности)
     
     private init() {
         Logger.shared.info("Initializing WindowManager")
@@ -29,7 +29,8 @@ class WindowManager: ObservableObject {
         
         updateDisplays()
         setupDisplayReconfigurationCallback()
-        setupMouseTracking()
+        // Mouse tracking отключен по умолчанию для экономии памяти
+        // setupMouseTracking()
         
         initTimer.end()
         Logger.shared.info("WindowManager initialized with \(currentDisplays.count) display(s)")
@@ -228,15 +229,17 @@ class WindowManager: ObservableObject {
     }
     
     private func setWindowFrame(_ window: AXUIElement, to frame: CGRect) {
-        // Установить позицию
-        var position = CGPoint(x: frame.origin.x, y: frame.origin.y)
-        let positionValue = AXValueCreate(.cgPoint, &position)
-        AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, positionValue!)
-        
-        // Установить размер
-        var size = CGSize(width: frame.size.width, height: frame.size.height)
-        let sizeValue = AXValueCreate(.cgSize, &size)
-        AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue!)
+        autoreleasepool {
+            // Использовать batch установку для уменьшения вызовов AX API
+            var position = CGPoint(x: frame.origin.x, y: frame.origin.y)
+            var size = CGSize(width: frame.size.width, height: frame.size.height)
+            
+            if let positionValue = AXValueCreate(.cgPoint, &position),
+               let sizeValue = AXValueCreate(.cgSize, &size) {
+                AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, positionValue)
+                AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
+            }
+        }
     }
     
     private func getWindowSize(_ window: AXUIElement) -> CGSize {
@@ -279,23 +282,24 @@ class WindowManager: ObservableObject {
     
     /// Применить автоматическую раскладку
     func applyAutoLayout(_ layoutType: AutoLayoutType) {
-        Logger.shared.info("Applying auto-layout: \(layoutType.displayName)")
-        let timer = Logger.shared.startOperation("Auto Layout - \(layoutType.displayName)")
-        
-        let windows = AccessibilityHelper.getAllWindows()
-        guard !windows.isEmpty else {
-            Logger.shared.warning("No windows found for auto-layout")
-            return
-        }
-        Logger.shared.debug("Found \(windows.count) window(s) to arrange")
-        
-        guard let screen = NSScreen.main else {
-            Logger.shared.warning("No main screen found")
-            return
-        }
-        
-        let visibleFrame = screen.visibleFrame
-        Logger.shared.debug("Screen frame: \(visibleFrame)")
+        autoreleasepool {
+            Logger.shared.info("Applying auto-layout: \(layoutType.displayName)")
+            let timer = Logger.shared.startOperation("Auto Layout - \(layoutType.displayName)")
+            
+            let windows = AccessibilityHelper.getAllWindows()
+            guard !windows.isEmpty else {
+                Logger.shared.warning("No windows found for auto-layout")
+                return
+            }
+            Logger.shared.debug("Found \(windows.count) window(s) to arrange")
+            
+            guard let screen = NSScreen.main else {
+                Logger.shared.warning("No main screen found")
+                return
+            }
+            
+            let visibleFrame = screen.visibleFrame
+            Logger.shared.debug("Screen frame: \(visibleFrame)")
         
         switch layoutType {
         case .grid:
@@ -328,10 +332,11 @@ class WindowManager: ObservableObject {
             applyMultiTaskModeLayout(windows: windows, in: visibleFrame)
         case .ultraWideMode:
             applyUltraWideModeLayout(windows: windows, in: visibleFrame, screen: screen)
+            }
+            
+            timer.end()
+            Logger.shared.info("Auto-layout applied successfully")
         }
-        
-        timer.end()
-        Logger.shared.info("Auto-layout applied successfully")
     }
     
     /// Сбросить все окна в исходное состояние (центрировать)
@@ -366,48 +371,62 @@ class WindowManager: ObservableObject {
         let windowWidth = frame.width / CGFloat(columns)
         let windowHeight = frame.height / CGFloat(rows)
         
-        for (index, window) in windows.enumerated() {
-            let col = index % columns
-            let row = index / columns
-            
-            let windowFrame = CGRect(
-                x: frame.minX + CGFloat(col) * windowWidth,
-                y: frame.minY + CGFloat(row) * windowHeight,
-                width: windowWidth,
-                height: windowHeight
-            )
-            
-            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+        // Batch process windows in groups to reduce memory pressure
+        let batchSize = 5
+        for batchStart in stride(from: 0, to: windows.count, by: batchSize) {
+            autoreleasepool {
+                let batchEnd = min(batchStart + batchSize, windows.count)
+                let batch = windows[batchStart..<batchEnd]
+                
+                for (index, window) in batch.enumerated() {
+                    let globalIndex = batchStart + index
+                    let col = globalIndex % columns
+                    let row = globalIndex / columns
+                    
+                    let windowFrame = CGRect(
+                        x: frame.minX + CGFloat(col) * windowWidth,
+                        y: frame.minY + CGFloat(row) * windowHeight,
+                        width: windowWidth,
+                        height: windowHeight
+                    )
+                    
+                    AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+                }
+            }
         }
     }
     
     private func applyHorizontalLayout(windows: [AXUIElement], in frame: CGRect) {
-        let windowWidth = frame.width / CGFloat(windows.count)
-        
-        for (index, window) in windows.enumerated() {
-            let windowFrame = CGRect(
-                x: frame.minX + CGFloat(index) * windowWidth,
-                y: frame.minY,
-                width: windowWidth,
-                height: frame.height
-            )
+        autoreleasepool {
+            let windowWidth = frame.width / CGFloat(windows.count)
             
-            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            for (index, window) in windows.enumerated() {
+                let windowFrame = CGRect(
+                    x: frame.minX + CGFloat(index) * windowWidth,
+                    y: frame.minY,
+                    width: windowWidth,
+                    height: frame.height
+                )
+                
+                AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            }
         }
     }
     
     private func applyVerticalLayout(windows: [AXUIElement], in frame: CGRect) {
-        let windowHeight = frame.height / CGFloat(windows.count)
-        
-        for (index, window) in windows.enumerated() {
-            let windowFrame = CGRect(
-                x: frame.minX,
-                y: frame.minY + CGFloat(index) * windowHeight,
-                width: frame.width,
-                height: windowHeight
-            )
+        autoreleasepool {
+            let windowHeight = frame.height / CGFloat(windows.count)
             
-            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            for (index, window) in windows.enumerated() {
+                let windowFrame = CGRect(
+                    x: frame.minX,
+                    y: frame.minY + CGFloat(index) * windowHeight,
+                    width: frame.width,
+                    height: windowHeight
+                )
+                
+                AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            }
         }
     }
     

@@ -10,6 +10,10 @@ import AppKit
 
 class AccessibilityHelper {
     
+    // MARK: - Caching
+    private static var cachedWindows: (windows: [AXUIElement], timestamp: Date)?
+    private static let windowCacheDuration: TimeInterval = 0.3 // 300ms cache
+    
     // MARK: - Permission Checks
     
     static func checkAccessibilityPermission() -> Bool {
@@ -38,39 +42,47 @@ class AccessibilityHelper {
     ]
     
     static func getAllWindows() -> [AXUIElement] {
-        Logger.shared.debug("Getting all windows...")
-        let timer = Logger.shared.startOperation("Get All Windows")
-        var windows: [AXUIElement] = []
-        
-        guard let runningApps = NSWorkspace.shared.runningApplications as [NSRunningApplication]? else {
-            Logger.shared.warning("Could not get running applications")
-            return windows
+        // Использовать кеш для частых запросов
+        if let cached = cachedWindows,
+           Date().timeIntervalSince(cached.timestamp) < windowCacheDuration {
+            Logger.shared.debug("Returning cached windows: \(cached.windows.count)")
+            return cached.windows
         }
         
-        // Фильтруем приложения для оптимизации
-        let filteredApps = runningApps.filter { app in
-            // Пропускаем системные приложения
-            if let bundleId = app.bundleIdentifier, systemAppsToSkip.contains(bundleId) {
-                return false
+        return autoreleasepool {
+            Logger.shared.debug("Getting all windows...")
+            let timer = Logger.shared.startOperation("Get All Windows")
+            var windows: [AXUIElement] = []
+            
+            guard let runningApps = NSWorkspace.shared.runningApplications as [NSRunningApplication]? else {
+                Logger.shared.warning("Could not get running applications")
+                return windows
             }
             
-            // Пропускаем фоновые приложения без UI
-            if app.activationPolicy != .regular {
-                return false
+            // Фильтруем приложения для оптимизации
+            let filteredApps = runningApps.filter { app in
+                // Пропускаем системные приложения
+                if let bundleId = app.bundleIdentifier, systemAppsToSkip.contains(bundleId) {
+                    return false
+                }
+                
+                // Пропускаем фоновые приложения без UI
+                if app.activationPolicy != .regular {
+                    return false
+                }
+                
+                // Пропускаем скрытые приложения
+                if app.isHidden {
+                    return false
+                }
+                
+                return true
             }
             
-            // Пропускаем скрытые приложения
-            if app.isHidden {
-                return false
-            }
+            Logger.shared.debug("Scanning \(filteredApps.count) apps (filtered from \(runningApps.count))")
             
-            return true
-        }
-        
-        Logger.shared.debug("Scanning \(filteredApps.count) apps (filtered from \(runningApps.count))")
-        
-        var processedApps = 0
-        var skippedApps = 0
+            var processedApps = 0
+            var skippedApps = 0
         
         for app in filteredApps {
             let appElement = AXUIElementCreateApplication(app.processIdentifier)
@@ -109,7 +121,11 @@ class AccessibilityHelper {
         
         timer.end()
         Logger.shared.debug("Found \(windows.count) window(s) from \(processedApps) apps (skipped \(skippedApps))")
+        
+        // Обновить кеш
+        cachedWindows = (windows, Date())
         return windows
+        }
     }
     
     static func getWindowInfo(_ window: AXUIElement) -> WindowInfo? {
@@ -169,9 +185,28 @@ class AccessibilityHelper {
 
     @discardableResult
     static func setWindowFrame(_ window: AXUIElement, to frame: CGRect) -> Bool {
-        let positionSuccess = setWindowPosition(window, to: frame.origin)
-        let sizeSuccess = setWindowSize(window, to: frame.size)
-        return positionSuccess && sizeSuccess
+        autoreleasepool {
+            // Batch установка - оба значения за один раз
+            var position = frame.origin
+            var size = frame.size
+            
+            var success = true
+            if let positionValue = AXValueCreate(.cgPoint, &position) {
+                let result = AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, positionValue)
+                success = success && (result == .success)
+            } else {
+                success = false
+            }
+            
+            if let sizeValue = AXValueCreate(.cgSize, &size) {
+                let result = AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
+                success = success && (result == .success)
+            } else {
+                success = false
+            }
+            
+            return success
+        }
     }
     
     // MARK: - App Information
