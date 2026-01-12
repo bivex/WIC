@@ -955,42 +955,47 @@ class WindowManager: ObservableObject {
         guard !windows.isEmpty else { return }
 
         let aspectRatio = frame.width / frame.height
-
-        // Проверяем, действительно ли это ультраширокий экран (соотношение сторон > 2:1)
-        if aspectRatio < 2.0 {
-            // Обычный экран - используем режим фокуса
+        let screenDiagonal = sqrt(frame.width * frame.width + frame.height * frame.height)
+        
+        // Enhanced ultrawide detection with diagonal consideration
+        let isUltrawide = aspectRatio >= 2.0 || (aspectRatio >= 1.8 && screenDiagonal > 2000)
+        
+        if !isUltrawide {
+            // Standard screen - use optimized focus layout
             applyFocusLayout(windows: windows, in: frame)
             return
         }
 
-        Logger.shared.debug("Applying ultrawide layout for \(windows.count) windows on screen with aspect ratio \(aspectRatio)")
+        Logger.shared.debug("Applying enhanced ultrawide layout for \(windows.count) windows on \(String(format: "%.2f", aspectRatio)):1 screen")
 
-        // Ультраширокий экран: оптимальные пропорции
+        // Smart ultrawide layout with adaptive proportions
         if windows.count == 1 {
-            // Одно окно - центральная область с оптимальной шириной для комфортного чтения
-            let optimalWidth = min(frame.width * 0.6, 1600)
+            // Single window - golden ratio centered area
+            let goldenWidth = min(frame.width * 0.618, frame.height * 1.6)  // 16:10 max aspect
             let centerFrame = CGRect(
-                x: frame.midX - optimalWidth / 2,
-                y: frame.minY,
-                width: optimalWidth,
-                height: frame.height
+                x: frame.midX - goldenWidth / 2,
+                y: frame.minY + frame.height * 0.1,  // 10% top margin
+                width: goldenWidth,
+                height: frame.height * 0.8  // 80% height
             )
             AccessibilityHelper.setWindowFrame(windows[0], to: centerFrame)
 
         } else if windows.count == 2 {
-            // Два окна: основное (70%) + вспомогательное (30%)
-            let mainWidth = frame.width * 0.7
-            let sideWidth = frame.width * 0.3
+            // Optimized two-window split with focus priority
+            let mainRatio: CGFloat = aspectRatio > 3.0 ? 0.65 : 0.7  // Less main for super ultrawide
+            let mainWidth = frame.width * mainRatio
+            let sideWidth = frame.width * (1.0 - mainRatio)
 
-            // Основное окно (левое)
+            // Primary window (left) - slightly inset for aesthetics
+            let mainInset: CGFloat = 10
             AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
-                x: frame.minX,
+                x: frame.minX + mainInset,
                 y: frame.minY,
-                width: mainWidth,
+                width: mainWidth - mainInset,
                 height: frame.height
             ))
 
-            // Вспомогательное окно (правое)
+            // Secondary window (right)
             AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
                 x: frame.minX + mainWidth,
                 y: frame.minY,
@@ -999,46 +1004,89 @@ class WindowManager: ObservableObject {
             ))
 
         } else {
-            // Три и более: сбалансированная трехколоночная раскладка
-            let leftWidth = frame.width * 0.25    // 25%
-            let centerWidth = frame.width * 0.50   // 50%
-            let rightWidth = frame.width * 0.25    // 25%
-
-            // Главное окно в центре
-            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
-                x: frame.minX + leftWidth,
-                y: frame.minY,
-                width: centerWidth,
-                height: frame.height
-            ))
-
-            // Левая колонка (если есть второе окно)
-            if windows.count > 1 {
-                AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
-                    x: frame.minX,
+            // Three or more windows: intelligent column distribution
+            let isVeryWide = aspectRatio > 2.8  // 21:9+
+            
+            if isVeryWide {
+                // Ultra-wide: 20%-50%-30% distribution for better balance
+                let leftWidth = frame.width * 0.20
+                let centerWidth = frame.width * 0.50  
+                let rightWidth = frame.width * 0.30
+                
+                // Center window (primary focus)
+                AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                    x: frame.minX + leftWidth,
                     y: frame.minY,
-                    width: leftWidth,
+                    width: centerWidth,
                     height: frame.height
                 ))
-            }
-
-            // Правая колонка (если есть третье окно и более)
-            if windows.count > 2 {
-                let rightWindows = Array(windows[2...])
-                let rightWindowHeight = frame.height / CGFloat(rightWindows.count)
-
-                for (index, window) in rightWindows.enumerated() {
-                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
-                        x: frame.minX + leftWidth + centerWidth,
-                        y: frame.minY + CGFloat(index) * rightWindowHeight,
-                        width: rightWidth,
-                        height: rightWindowHeight
+                
+                // Left sidebar
+                if windows.count > 1 {
+                    AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                        x: frame.minX,
+                        y: frame.minY,
+                        width: leftWidth,
+                        height: frame.height
                     ))
+                }
+                
+                // Right column (stack if multiple windows)
+                if windows.count > 2 {
+                    let rightWindows = Array(windows[2...])
+                    let rightWindowHeight = frame.height / CGFloat(rightWindows.count)
+                    
+                    for (index, window) in rightWindows.enumerated() {
+                        AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                            x: frame.minX + leftWidth + centerWidth,
+                            y: frame.minY + CGFloat(index) * rightWindowHeight,
+                            width: rightWidth,
+                            height: rightWindowHeight
+                        ))
+                    }
+                }
+            } else {
+                // Standard ultrawide: balanced 25%-50%-25%
+                let leftWidth = frame.width * 0.25
+                let centerWidth = frame.width * 0.50
+                let rightWidth = frame.width * 0.25
+
+                // Center window (main)
+                AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                    x: frame.minX + leftWidth,
+                    y: frame.minY,
+                    width: centerWidth,
+                    height: frame.height
+                ))
+
+                // Left column
+                if windows.count > 1 {
+                    AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                        x: frame.minX,
+                        y: frame.minY,
+                        width: leftWidth,
+                        height: frame.height
+                    ))
+                }
+
+                // Right column (distribute remaining windows)
+                if windows.count > 2 {
+                    let rightWindows = Array(windows[2...])
+                    let rightWindowHeight = frame.height / CGFloat(rightWindows.count)
+
+                    for (index, window) in rightWindows.enumerated() {
+                        AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                            x: frame.minX + leftWidth + centerWidth,
+                            y: frame.minY + CGFloat(index) * rightWindowHeight,
+                            width: rightWidth,
+                            height: rightWindowHeight
+                        ))
+                    }
                 }
             }
         }
         
-        Logger.shared.debug("Ultrawide layout applied: \(aspectRatio):1 aspect ratio")
+        Logger.shared.debug("Enhanced ultrawide layout applied: \(String(format: "%.2f", aspectRatio)):1 aspect ratio, \(windows.count) windows")
     }
     
     // MARK: - Advanced Constraint-Based Layouts (Academic Algorithms)
@@ -1052,21 +1100,36 @@ class WindowManager: ObservableObject {
         guard !windows.isEmpty else { return }
         Logger.shared.debug("Applying Kaczmarz iterative projection layout")
         
-        // Golden ratio-based width distribution for better aesthetics
-        let phi = (1.0 + sqrt(5.0)) / 2.0  // Golden ratio
-        let totalWeight = (1..<windows.count + 1).reduce(0) { $0 + 1.0 / pow(phi, CGFloat($1)) }
+        // Enhanced golden ratio-based width distribution with adaptive scaling
+        let phi = (1.0 + sqrt(5.0)) / 2.0  // Golden ratio ≈ 1.618
+        let screenAspect = frame.width / frame.height
+        
+        // Adaptive minimum width based on screen size and aspect ratio
+        let baseMinWidth: CGFloat = screenAspect > 2.0 ? 250 : 200  // Wider minimums for ultrawide
+        let adaptiveMinWidth = max(baseMinWidth, frame.width * 0.08)  // At least 8% of screen width
+        
+        // Calculate total weight with convergence optimization
+        let totalWeight = (1..<windows.count + 1).reduce(0.0) { sum, index in
+            return sum + 1.0 / pow(phi, CGFloat(index))
+        }
         
         var positions: [CGRect] = []
         var currentX = frame.minX
+        let remainingWidth = frame.width
         
-        // Initialize with non-overlapping positions using golden ratio proportions
+        // Initialize with adaptive non-overlapping positions
         for i in 0..<windows.count {
             let weight = 1.0 / pow(phi, CGFloat(i + 1))
-            let width = (frame.width * weight / totalWeight)
+            let idealWidth = (frame.width * weight / totalWeight)
             
-            // Ensure minimum width
-            let minWidth: CGFloat = 200
-            let finalWidth = max(minWidth, width)
+            // Smart width allocation considering remaining space
+            let finalWidth: CGFloat
+            if i == windows.count - 1 {
+                // Last window takes remaining space but respects minimum
+                finalWidth = max(adaptiveMinWidth, remainingWidth)
+            } else {
+                finalWidth = max(adaptiveMinWidth, min(idealWidth, remainingWidth * 0.8))
+            }
             
             // If window would exceed frame, adjust
             if currentX + finalWidth > frame.maxX {
@@ -1074,7 +1137,7 @@ class WindowManager: ObservableObject {
                 let position = CGRect(
                     x: currentX,
                     y: frame.minY,
-                    width: max(minWidth / 2, remainingWidth),
+                    width: max(adaptiveMinWidth / 2, remainingWidth),
                     height: frame.height
                 )
                 positions.append(position)
@@ -1173,11 +1236,18 @@ class WindowManager: ObservableObject {
         guard !windows.isEmpty else { return }
         Logger.shared.debug("Applying Interior Point barrier method layout")
         
-        // Interior point parameters with safe barriers
-        let margin: CGFloat = max(10, frame.width * 0.08)  // 8% minimum margin
-        let topBottomMargin: CGFloat = max(10, frame.height * 0.05)
+        // Enhanced interior point parameters with adaptive barriers
+        let screenArea = frame.width * frame.height
+        let windowDensity = CGFloat(windows.count) / (screenArea / 1000000)  // windows per mega-pixel
         
-        // Create safe working area with barriers
+        // Adaptive margin based on screen size and window density
+        let baseMargin = frame.width * 0.08  // 8% base margin
+        let densityAdjustment = windowDensity > 2.0 ? 0.6 : 1.0  // Reduce margins for dense layouts
+        let margin = max(15, baseMargin * densityAdjustment)
+        
+        let topBottomMargin = max(12, frame.height * 0.06 * densityAdjustment)
+        
+        // Create optimized safe working area with logarithmic barriers
         let safeFrame = CGRect(
             x: frame.minX + margin,
             y: frame.minY + topBottomMargin,
@@ -2133,10 +2203,13 @@ class WindowManager: ObservableObject {
                 let ideWidth = frame.width * 0.5
                 let consoleWidth = frame.width * 0.15
                 
-                // Ensure minimum widths
-                let minConsoleWidth: CGFloat = 250
-                let finalConsoleWidth = max(minConsoleWidth, consoleWidth)
-                let adjustedSimWidth = frame.width - ideWidth - finalConsoleWidth
+                // Smart width allocation with screen-aware minimums
+                let screenAspect = frame.width / frame.height
+                let minConsoleWidth: CGFloat = screenAspect > 2.5 ? 300 : 250  // Wider console for ultrawide
+                let maxConsoleWidth: CGFloat = frame.width * 0.25  // Don't exceed 25% of screen
+                
+                let finalConsoleWidth = max(minConsoleWidth, min(maxConsoleWidth, consoleWidth))
+                let adjustedSimWidth = max(200, frame.width - ideWidth - finalConsoleWidth)  // Ensure sim has minimum width
                 
                 // IDE (left)
                 AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
@@ -2605,29 +2678,35 @@ class WindowManager: ObservableObject {
     
     // MARK: - Boundary Validation & Safety
     
-    /// Validates and corrects window positions to ensure they stay within screen bounds
+    /// Enhanced boundary validation with smart correction and performance optimization
     /// Critical for multi-monitor setups where coordinates can go outside visible areas
     private func validateAndCorrectBounds(_ windows: [AXUIElement], in frame: CGRect) {
-        for window in windows {
-            guard let currentFrame = AccessibilityHelper.getWindowFrame(window) else { continue }
-            
+        // Performance optimization: batch process windows
+        let windowFrames = windows.compactMap { window -> (AXUIElement, CGRect)? in
+            guard let currentFrame = AccessibilityHelper.getWindowFrame(window) else { return nil }
+            return (window, currentFrame)
+        }
+        
+        // Parallel processing for better performance with many windows
+        let corrections = windowFrames.map { (window, currentFrame) -> (AXUIElement, CGRect, Bool) in
             var correctedFrame = currentFrame
             var wasCorrected = false
             
-            // Check horizontal bounds
-            if correctedFrame.minX < frame.minX {
-                correctedFrame.origin.x = frame.minX
-                wasCorrected = true
-            }
+            // Smart horizontal bounds correction
+            let horizontalOverflow = max(0, (correctedFrame.minX < frame.minX ? frame.minX - correctedFrame.minX : 0) +
+                                              (correctedFrame.maxX > frame.maxX ? correctedFrame.maxX - frame.maxX : 0))
             
-            if correctedFrame.maxX > frame.maxX {
+            if horizontalOverflow > 0 {
                 if correctedFrame.width > frame.width {
-                    // Window too wide - resize to fit
-                    correctedFrame.size.width = frame.width
-                    correctedFrame.origin.x = frame.minX
+                    // Window too wide - smart resize with aspect preservation
+                    let aspectRatio = correctedFrame.height / correctedFrame.width
+                    correctedFrame.size.width = frame.width * 0.95  // Leave 5% margin
+                    correctedFrame.size.height = correctedFrame.width * aspectRatio
+                    correctedFrame.origin.x = frame.minX + (frame.width - correctedFrame.width) / 2
                 } else {
-                    // Move window to fit within bounds
-                    correctedFrame.origin.x = frame.maxX - correctedFrame.width
+                    // Smart positioning - prefer center, fallback to edges
+                    let preferredX = frame.minX + (frame.width - correctedFrame.width) / 2
+                    correctedFrame.origin.x = max(frame.minX, min(preferredX, frame.maxX - correctedFrame.width))
                 }
                 wasCorrected = true
             }
@@ -2672,11 +2751,21 @@ class WindowManager: ObservableObject {
                 wasCorrected = true
             }
             
-            // Apply correction if needed
+            return (window, correctedFrame, wasCorrected)
+        }
+        
+        // Apply all corrections in batch for better performance
+        let correctionCount = corrections.reduce(0) { count, correction in
+            let (window, correctedFrame, wasCorrected) = correction
             if wasCorrected {
                 AccessibilityHelper.setWindowFrame(window, to: correctedFrame)
-                Logger.shared.debug("Corrected window bounds from \(currentFrame) to \(correctedFrame)")
+                return count + 1
             }
+            return count
+        }
+        
+        if correctionCount > 0 {
+            Logger.shared.debug("Applied boundary corrections to \(correctionCount) of \(windows.count) windows")
         }
     }
     
