@@ -69,6 +69,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Максимизировать", action: #selector(maximize), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         
+        // Автолайаут
+        let autoLayoutMenu = NSMenu()
+        autoLayoutMenu.addItem(NSMenuItem(title: "Сетка", action: #selector(applyGridLayout), keyEquivalent: ""))
+        autoLayoutMenu.addItem(NSMenuItem(title: "Горизонтально", action: #selector(applyHorizontalLayout), keyEquivalent: ""))
+        autoLayoutMenu.addItem(NSMenuItem(title: "Вертикально", action: #selector(applyVerticalLayout), keyEquivalent: ""))
+        autoLayoutMenu.addItem(NSMenuItem(title: "Каскад", action: #selector(applyCascadeLayout), keyEquivalent: ""))
+        autoLayoutMenu.addItem(NSMenuItem(title: "Фибоначчи", action: #selector(applyFibonacciLayout), keyEquivalent: ""))
+        autoLayoutMenu.addItem(NSMenuItem(title: "Фокус", action: #selector(applyFocusLayout), keyEquivalent: ""))
+        
+        let autoLayoutItem = NSMenuItem(title: "Автолайаут", action: nil, keyEquivalent: "")
+        autoLayoutItem.submenu = autoLayoutMenu
+        menu.addItem(autoLayoutItem)
+        menu.addItem(NSMenuItem.separator())
+        
         menu.addItem(NSMenuItem(title: "Выйти", action: #selector(quit), keyEquivalent: "q"))
         
         statusBarItem?.menu = menu
@@ -102,6 +116,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc private func maximize() {
         WindowManager.shared.maximizeWindow()
+    }
+    
+    @objc private func applyGridLayout() {
+        WindowManager.shared.applyAutoLayout(.grid)
+    }
+    
+    @objc private func applyHorizontalLayout() {
+        WindowManager.shared.applyAutoLayout(.horizontal)
+    }
+    
+    @objc private func applyVerticalLayout() {
+        WindowManager.shared.applyAutoLayout(.vertical)
+    }
+    
+    @objc private func applyCascadeLayout() {
+        WindowManager.shared.applyAutoLayout(.cascade)
+    }
+    
+    @objc private func applyFibonacciLayout() {
+        WindowManager.shared.applyAutoLayout(.fibonacci)
+    }
+    
+    @objc private func applyFocusLayout() {
+        WindowManager.shared.applyAutoLayout(.focus)
     }
     
     @objc private func quit() {
