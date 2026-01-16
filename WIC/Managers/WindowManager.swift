@@ -49,8 +49,8 @@ class WindowManager: ObservableObject {
         
         updateDisplays()
         setupDisplayReconfigurationCallback()
-        // Mouse tracking отключен по умолчанию для экономии памяти
-        // setupMouseTracking()
+        // Mouse tracking включен для функции автоприклеивания
+        setupMouseTracking()
         
         initTimer.end()
         Logger.shared.info("WindowManager initialized with \(currentDisplays.count) display(s)")
@@ -209,35 +209,31 @@ class WindowManager: ObservableObject {
         // Проверить, близко ли курсор к краям экрана
         var targetPosition: WindowPosition?
         
-        // Левый край
-        if location.x - visibleFrame.minX < threshold {
+        // Проверка углов - приоритетнее, чем края
+        let nearLeft = location.x - visibleFrame.minX < threshold
+        let nearRight = visibleFrame.maxX - location.x < threshold
+        let nearTop = visibleFrame.maxY - location.y < threshold
+        let nearBottom = location.y - visibleFrame.minY < threshold
+        
+        // Углы (приоритет над краями)
+        if nearTop && nearLeft {
+            targetPosition = .topLeftQuarter
+        } else if nearTop && nearRight {
+            targetPosition = .topRightQuarter
+        } else if nearBottom && nearLeft {
+            targetPosition = .bottomLeftQuarter
+        } else if nearBottom && nearRight {
+            targetPosition = .bottomRightQuarter
+        }
+        // Края (только если не угол)
+        else if nearLeft {
             targetPosition = .leftHalf
-        }
-        // Правый край
-        else if visibleFrame.maxX - location.x < threshold {
+        } else if nearRight {
             targetPosition = .rightHalf
-        }
-        // Верхний край
-        else if visibleFrame.maxY - location.y < threshold {
-            // Проверить углы
-            if location.x - visibleFrame.minX < threshold * 2 {
-                targetPosition = .topLeftQuarter
-            } else if visibleFrame.maxX - location.x < threshold * 2 {
-                targetPosition = .topRightQuarter
-            } else {
-                targetPosition = .topHalf
-            }
-        }
-        // Нижний край
-        else if location.y - visibleFrame.minY < threshold {
-            // Проверить углы
-            if location.x - visibleFrame.minX < threshold * 2 {
-                targetPosition = .bottomLeftQuarter
-            } else if visibleFrame.maxX - location.x < threshold * 2 {
-                targetPosition = .bottomRightQuarter
-            } else {
-                targetPosition = .bottomHalf
-            }
+        } else if nearTop {
+            targetPosition = .topHalf
+        } else if nearBottom {
+            targetPosition = .bottomHalf
         }
         
         if let position = targetPosition {
