@@ -15,6 +15,26 @@ class WindowManager: ObservableObject {
     @Published var snapSettings = SnapSettings()
     @Published var currentDisplays: [DisplayInfo] = []
     
+    // Auto-rearrange settings
+    @Published var autoRearrangeEnabled: Bool = UserDefaults.standard.bool(forKey: "autoRearrangeEnabled") {
+        didSet {
+            UserDefaults.standard.set(autoRearrangeEnabled, forKey: "autoRearrangeEnabled")
+            updateAutoRearrangeTimer()
+        }
+    }
+    @Published var autoRearrangeInterval: Int = UserDefaults.standard.integer(forKey: "autoRearrangeInterval") != 0 ? UserDefaults.standard.integer(forKey: "autoRearrangeInterval") : 5 {
+        didSet {
+            UserDefaults.standard.set(autoRearrangeInterval, forKey: "autoRearrangeInterval")
+            updateAutoRearrangeTimer()
+        }
+    }
+    @Published var autoRearrangeProfile: String = UserDefaults.standard.string(forKey: "autoRearrangeProfile") ?? AutoLayoutType.grid.rawValue {
+        didSet {
+            UserDefaults.standard.set(autoRearrangeProfile, forKey: "autoRearrangeProfile")
+        }
+    }
+    
+    private var autoRearrangeTimer: Timer?
     private var displayReconfigurationCallback: (() -> Void)?
     private var mouseMonitor: Any?
     private var isDragging = false
@@ -34,6 +54,45 @@ class WindowManager: ObservableObject {
         
         initTimer.end()
         Logger.shared.info("WindowManager initialized with \(currentDisplays.count) display(s)")
+        
+        // Initialize auto-rearrange timer if enabled
+        updateAutoRearrangeTimer()
+    }
+    
+    deinit {
+        autoRearrangeTimer?.invalidate()
+    }
+    
+    // MARK: - Auto-Rearrange Management
+    
+    private func updateAutoRearrangeTimer() {
+        // Invalidate existing timer
+        autoRearrangeTimer?.invalidate()
+        autoRearrangeTimer = nil
+        
+        // Create new timer if enabled
+        if autoRearrangeEnabled && autoRearrangeInterval > 0 {
+            let interval = TimeInterval(autoRearrangeInterval * 60) // Convert minutes to seconds
+            autoRearrangeTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+                self?.performAutoRearrange()
+            }
+            Logger.shared.info("Auto-rearrange timer set for every \(autoRearrangeInterval) minute(s)")
+        } else {
+            Logger.shared.info("Auto-rearrange timer disabled")
+        }
+    }
+    
+    private func performAutoRearrange() {
+        guard autoRearrangeEnabled else { return }
+        
+        // Get the selected layout profile
+        guard let layoutType = AutoLayoutType(rawValue: autoRearrangeProfile) else {
+            Logger.shared.warning("Invalid auto-rearrange profile: \(autoRearrangeProfile)")
+            return
+        }
+        
+        Logger.shared.info("Performing automatic rearrange with profile: \(layoutType.displayName)")
+        applyAutoLayout(layoutType)
     }
     
     // MARK: - Display Management

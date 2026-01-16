@@ -203,6 +203,64 @@ struct AutoLayoutView: View {
                 
                 Divider()
                 
+                // Auto-rearrange section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "clock.arrow.2.circlepath")
+                            .font(.title2)
+                            .foregroundColor(.purple)
+                        Text("Автоматическая переорганизация")
+                            .font(.headline)
+                    }
+                    
+                    Toggle("Автоматически переорганизовывать окна", isOn: $windowManager.autoRearrangeEnabled)
+                        .toggleStyle(.switch)
+                    
+                    if windowManager.autoRearrangeEnabled {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Каждые")
+                                TextField("", value: $windowManager.autoRearrangeInterval, formatter: NumberFormatter())
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(width: 60)
+                                Text("минут")
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Профиль раскладки:")
+                                    .font(.subheadline)
+                                
+                                Picker("", selection: Binding(
+                                    get: { AutoLayoutType(rawValue: windowManager.autoRearrangeProfile) ?? .grid },
+                                    set: { windowManager.autoRearrangeProfile = $0.rawValue }
+                                )) {
+                                    ForEach(AutoLayoutType.allCases) { layoutType in
+                                        Text(layoutType.displayName).tag(layoutType)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle")
+                                    .foregroundColor(.blue)
+                                Text("Окна будут автоматически переорганизованы по выбранному профилю через указанный интервал")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.top, 4)
+                        }
+                        .padding(.leading, 20)
+                    }
+                }
+                .padding()
+                .background(Color.purple.opacity(0.05))
+                .cornerRadius(10)
+                
+                Divider()
+                
                 // Подсказки
                 VStack(alignment: .leading, spacing: 8) {
                     Text("💡 Подсказки")
