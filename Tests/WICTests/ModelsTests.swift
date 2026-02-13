@@ -39,7 +39,12 @@ final class ModelsTests: XCTestCase {
             id: 1,
             name: "Display 1",
             frame: CGRect(x: 0, y: 0, width: 1920, height: 1080),
-            isVertical: false
+            isVertical: false,
+            vendorID: 0x10ac,
+            productID: 0x1234,
+            serialNumber: 12345,
+            manufactureYear: 2023,
+            manufactureWeek: 42
         )
 
         XCTAssertEqual(display.id, 1)
@@ -47,6 +52,7 @@ final class ModelsTests: XCTestCase {
         XCTAssertEqual(display.frame.width, 1920)
         XCTAssertEqual(display.frame.height, 1080)
         XCTAssertFalse(display.isVertical)
+        XCTAssertEqual(display.vendorName, "Dell")
     }
 
     func testDisplayInfoVerticalDetection() {
@@ -55,7 +61,12 @@ final class ModelsTests: XCTestCase {
             id: 1,
             name: "Horizontal",
             frame: CGRect(x: 0, y: 0, width: 1920, height: 1080),
-            isVertical: false
+            isVertical: false,
+            vendorID: 0x10ac,
+            productID: 0x1234,
+            serialNumber: 12345,
+            manufactureYear: nil,
+            manufactureWeek: nil
         )
         XCTAssertFalse(horizontalDisplay.isVertical)
 
@@ -64,9 +75,82 @@ final class ModelsTests: XCTestCase {
             id: 2,
             name: "Vertical",
             frame: CGRect(x: 0, y: 0, width: 1080, height: 1920),
-            isVertical: true
+            isVertical: true,
+            vendorID: 0x10ac,
+            productID: 0x5678,
+            serialNumber: 67890,
+            manufactureYear: nil,
+            manufactureWeek: nil
         )
         XCTAssertTrue(verticalDisplay.isVertical)
+    }
+    
+    func testLGOLED42Detection() {
+        // Test LG OLED 42" with correct vendor and product ID
+        let lgOLED42 = DisplayInfo(
+            id: 1,
+            name: "LG OLED",
+            frame: CGRect(x: 0, y: 0, width: 3840, height: 2160),
+            isVertical: false,
+            vendorID: 0x1e6d,  // LG vendor ID
+            productID: 0xc0c8, // LG OLED 42" product ID
+            serialNumber: 1010101,
+            manufactureYear: 2022,
+            manufactureWeek: 1
+        )
+        
+        XCTAssertTrue(lgOLED42.isLGOLED42, "Should detect LG OLED 42\" by vendor and product ID")
+        XCTAssertEqual(lgOLED42.vendorName, "LG")
+        
+        // Test LG OLED with 4K resolution but different product ID
+        let lgOLED4K = DisplayInfo(
+            id: 2,
+            name: "LG OLED 48",
+            frame: CGRect(x: 0, y: 0, width: 3840, height: 2160),
+            isVertical: false,
+            vendorID: 0x1e6d,
+            productID: 0x0048, // Different product ID
+            serialNumber: 2020202,
+            manufactureYear: 2023,
+            manufactureWeek: 15
+        )
+        
+        XCTAssertTrue(lgOLED4K.isLGOLED42, "Should detect LG OLED by 4K resolution")
+        
+        // Test non-LG display
+        let dellMonitor = DisplayInfo(
+            id: 3,
+            name: "Dell Monitor",
+            frame: CGRect(x: 0, y: 0, width: 2560, height: 1440),
+            isVertical: false,
+            vendorID: 0x10ac, // Dell vendor ID
+            productID: 0x1234,
+            serialNumber: 12345,
+            manufactureYear: 2023,
+            manufactureWeek: 20
+        )
+        
+        XCTAssertFalse(dellMonitor.isLGOLED42, "Dell monitor should not be detected as LG OLED")
+        XCTAssertEqual(dellMonitor.vendorName, "Dell")
+    }
+    
+    func testDisplayInfoDescription() {
+        let display = DisplayInfo(
+            id: 1,
+            name: "Test Display",
+            frame: CGRect(x: 0, y: 0, width: 1920, height: 1080),
+            isVertical: false,
+            vendorID: 0x1e6d,
+            productID: 0xc0c8,
+            serialNumber: 1010101,
+            manufactureYear: 2022,
+            manufactureWeek: 1
+        )
+        
+        let description = display.fullDescription
+        XCTAssertTrue(description.contains("LG"), "Description should contain vendor name")
+        XCTAssertTrue(description.contains("1920x1080"), "Description should contain resolution")
+        XCTAssertTrue(description.contains("↔️"), "Description should contain orientation icon")
     }
 
     // MARK: - AutoLayoutType Tests

@@ -8,6 +8,7 @@
 import Foundation
 import CoreGraphics
 import AppKit
+import IOKit.graphics
 
 /// Типы позиций окна на экране
 enum WindowPosition: String, CaseIterable, Identifiable {
@@ -174,6 +175,169 @@ struct DisplayInfo: Identifiable {
     let name: String
     let frame: CGRect
     let isVertical: Bool
+    let vendorID: UInt32
+    let productID: UInt32
+    let serialNumber: UInt32
+    let manufactureYear: Int?
+    let manufactureWeek: Int?
+    
+    /// Человекочитаемое название модели дисплея
+    var modelName: String {
+        return getDisplayModelName()
+    }
+    
+    /// Название производителя
+    var vendorName: String {
+        return getVendorName()
+    }
+    
+    /// Полное описание дисплея
+    var fullDescription: String {
+        let size = "\(Int(frame.width))x\(Int(frame.height))"
+        let orientation = isVertical ? "↕️" : "↔️"
+        let vendor = vendorName
+        let model = modelName
+        
+        if model.isEmpty {
+            return "\(orientation) \(vendor) Display (\(size))"
+        } else {
+            return "\(orientation) \(vendor) \(model) (\(size))"
+        }
+    }
+    
+    /// Определяет, является ли дисплей LG OLED 42"
+    var isLGOLED42: Bool {
+        // LG vendor ID: 0x1e6d (7789)
+        // LG OLED 42" product IDs: 0xc0c8, 0xc0c9, 0xc0ca (49352-49354)
+        // Также проверяем разрешение ~4K (3840x2160 native для 42")
+        let isLGVendor = vendorID == 0x1e6d
+        let isOLED42ProductID = (productID >= 0xc0c8 && productID <= 0xc0ca) || 
+                                 productID == 0x0042 || // Generic 42" product ID
+                                 productID == 0x0043
+        let is4KResolution = (frame.width >= 3840 && frame.height >= 2160) ||
+                            (frame.width >= 2160 && frame.height >= 3840)
+        
+        return isLGVendor && (isOLED42ProductID || is4KResolution)
+    }
+    
+    /// Определяет название производителя по vendorID
+    private func getVendorName() -> String {
+        switch vendorID {
+        case 0x1e6d, 0x30e4:
+            return "LG"
+        case 0x4d10, 0x593a, 0x05ac:
+            return "Apple"
+        case 0x10ac:
+            return "Dell"
+        case 0x4c2d:
+            return "Samsung"
+        case 0x2d44:
+            return "HP"
+        case 0x5a63:
+            return "ViewSonic"
+        case 0x22f0:
+            return "ASUS"
+        case 0x0469:
+            return "BenQ"
+        case 0x4dd9:
+            return "Sony"
+        case 0x38a3:
+            return "Acer"
+        default:
+            return "Display"
+        }
+    }
+    
+    /// Определяет название модели дисплея
+    private func getDisplayModelName() -> String {
+        // Специальное определение для LG OLED
+        if vendorID == 0x1e6d {
+            // LG OLED models
+            switch productID {
+            case 0xc0c8, 0xc0c9, 0xc0ca:
+                // Определяем по разрешению и физическому размеру
+                let diagonal = estimatedDiagonalInches()
+                if diagonal >= 40 && diagonal <= 44 {
+                    return "OLED 42\""
+                } else if diagonal >= 46 && diagonal <= 50 {
+                    return "OLED 48\""
+                } else if diagonal >= 52 && diagonal <= 57 {
+                    return "OLED 55\""
+                } else if diagonal >= 62 && diagonal <= 68 {
+                    return "OLED 65\""
+                }
+                return "OLED TV"
+            case 0x0042:
+                return "OLED 42\" (42C2/42C3)"
+            case 0x0043:
+                return "OLED 42\" (42CS6LA)"
+            case 0x0048:
+                return "OLED 48\""
+            default:
+                break
+            }
+        }
+        
+        // Получаем информацию из IOKit
+        guard let displayInfo = getIODisplayInfo() else {
+            return ""
+        }
+        
+        return displayInfo
+    }
+    
+    /// Оценка диагонали в дюймах на основе разрешения
+    private func estimatedDiagonalInches() -> Double {
+        // Для OLED TV обычно используется PPI около 100-105
+        // 42" OLED: 3840x2160, ~104 PPI
+        let widthInches = Double(frame.width) / 100.0
+        let heightInches = Double(frame.height) / 100.0
+        let diagonal = sqrt(widthInches * widthInches + heightInches * heightInches)
+        return diagonal
+    }
+    
+    /// Получает информацию о дисплее из IOKit
+    private func getIODisplayInfo() -> String? {
+        var servicePort: io_service_t = 0
+        var iter: io_iterator_t = 0
+        
+        // Получаем IOService для дисплея
+        guard IOServiceGetMatchingServices(kIOMainPortDefault,
+                                          IOServiceMatching("IODisplayConnect"),
+                                          &iter) == KERN_SUCCESS else {
+            return nil
+        }
+        
+        defer { IOObjectRelease(iter) }
+        
+        // Ищем соответствующий дисплей
+        while true {
+            servicePort = IOIteratorNext(iter)
+            if servicePort == 0 { break }
+            
+            defer { IOObjectRelease(servicePort) }
+            
+            // Получаем информацию о дисплее
+            guard let displayInfo = IODisplayCreateInfoDictionary(servicePort, UInt32(kIODisplayOnlyPreferredName)),
+                  let info = displayInfo.takeRetainedValue() as? [String: Any] else {
+                continue
+            }
+            
+            // Извлекаем vendor и product ID из IOKit
+            if let vendorIDValue = info[kDisplayVendorID] as? UInt32,
+               let productIDValue = info[kDisplayProductID] as? UInt32,
+               vendorIDValue == vendorID && productIDValue == productID {
+                
+                // Получаем имя дисплея
+                if let names = info[kDisplayProductName] as? [String: String],
+                   let name = names["en_US"] ?? names.values.first {
+                    return name
+                }
+            }
+        }
+        
+        return nil
+    }
     
     static func getAllDisplays() -> [DisplayInfo] {
         var displays: [DisplayInfo] = []
@@ -189,15 +353,80 @@ struct DisplayInfo: Identifiable {
             let bounds = CGDisplayBounds(displayID)
             let isVertical = bounds.height > bounds.width
             
-            displays.append(DisplayInfo(
+            // Получаем информацию о vendor и product ID
+            let vendorID = CGDisplayVendorNumber(displayID)
+            let productID = CGDisplayModelNumber(displayID)
+            let serialNumber = CGDisplaySerialNumber(displayID)
+            
+            // Получаем дополнительную информацию из IOKit
+            var manufactureYear: Int?
+            var manufactureWeek: Int?
+            
+            if let (year, week) = getManufactureInfo(for: displayID) {
+                manufactureYear = year
+                manufactureWeek = week
+            }
+            
+            let displayInfo = DisplayInfo(
                 id: displayID,
                 name: "Display \(i + 1)",
                 frame: bounds,
-                isVertical: isVertical
-            ))
+                isVertical: isVertical,
+                vendorID: vendorID,
+                productID: productID,
+                serialNumber: serialNumber,
+                manufactureYear: manufactureYear,
+                manufactureWeek: manufactureWeek
+            )
+            
+            displays.append(displayInfo)
         }
         
         return displays
+    }
+    
+    /// Получает информацию о дате производства дисплея
+    private static func getManufactureInfo(for displayID: CGDirectDisplayID) -> (year: Int, week: Int)? {
+        var servicePort: io_service_t = 0
+        var iter: io_iterator_t = 0
+        
+        guard IOServiceGetMatchingServices(kIOMainPortDefault,
+                                          IOServiceMatching("IODisplayConnect"),
+                                          &iter) == KERN_SUCCESS else {
+            return nil
+        }
+        
+        defer { IOObjectRelease(iter) }
+        
+        while true {
+            servicePort = IOIteratorNext(iter)
+            if servicePort == 0 { break }
+            
+            defer { IOObjectRelease(servicePort) }
+            
+            guard let displayInfo = IODisplayCreateInfoDictionary(servicePort, UInt32(kIODisplayOnlyPreferredName)),
+                  let info = displayInfo.takeRetainedValue() as? [String: Any] else {
+                continue
+            }
+            
+            // Проверяем соответствие displayID
+            let vendorID = CGDisplayVendorNumber(displayID)
+            let productID = CGDisplayModelNumber(displayID)
+            
+            if let vendorIDValue = info[kDisplayVendorID] as? UInt32,
+               let productIDValue = info[kDisplayProductID] as? UInt32,
+               vendorIDValue == vendorID && productIDValue == productID {
+                
+                let year = info[kDisplayYearOfManufacture] as? Int
+                let week = info[kDisplayWeekOfManufacture] as? Int
+                
+                if let year = year, let week = week {
+                    return (year, week)
+                }
+            }
+        }
+        
+        return nil
     }
 }
 
