@@ -51,13 +51,14 @@ echo ""
 echo "🚀 Добавление в автозагрузку..."
 
 # Добавить в Login Items через osascript
-osascript <<EOF
-tell application "System Events"
-    make login item at end with properties {path:"/Applications/WIC.app", hidden:false}
-end tell
-EOF
+osascript -e 'tell application "System Events" to delete login item "WIC"' 2>/dev/null || true
+osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/WIC.app", hidden:false}' >/dev/null 2>&1
 
-echo "✅ WIC добавлен в автозагрузку"
+if [ $? -eq 0 ]; then
+    echo "✅ WIC добавлен в автозагрузку"
+else
+    echo "⚠️  Не удалось добавить в автозагрузку. Добавьте вручную в Системные настройки > Основные > Объекты входа"
+fi
 echo ""
 echo "🎉 Установка завершена!"
 echo ""

@@ -1313,8 +1313,12 @@ class WindowManager: ObservableObject {
         let screenArea = frame.width * frame.height
         let windowDensity = CGFloat(windows.count) / (screenArea / 1000000)  // windows per mega-pixel
         
-        // Adaptive margin based on screen size and window density
-        let baseMargin = frame.width * 0.08  // 8% base margin
+        // Check for LG OLED 42" and adjust margins accordingly
+        let currentDisplay = currentDisplays.first { $0.frame.intersects(frame) }
+        let isLGOLED = currentDisplay?.isLGOLED42 ?? false
+        
+        // Adaptive margin based on screen size, window density, and display type
+        let baseMargin = frame.width * (isLGOLED ? 0.06 : 0.08)  // Slightly less margin for large OLED
         let densityAdjustment = windowDensity > 2.0 ? 0.6 : 1.0  // Reduce margins for dense layouts
         let margin = max(15, baseMargin * densityAdjustment)
         
