@@ -99,6 +99,24 @@ class WindowManager: ObservableObject {
     
     private func updateDisplays() {
         currentDisplays = DisplayInfo.getAllDisplays()
+        
+        // Логирование обнаруженных дисплеев
+        Logger.shared.info("🖥️  Detected \(currentDisplays.count) display(s)")
+        for (index, display) in currentDisplays.enumerated() {
+            let displayNum = index + 1
+            Logger.shared.info("  Display \(displayNum): \(display.fullDescription)")
+            Logger.shared.debug("    Vendor: \(display.vendorName) (0x\(String(format: "%04X", display.vendorID)))")
+            Logger.shared.debug("    Product ID: 0x\(String(format: "%04X", display.productID))")
+            Logger.shared.debug("    Serial: \(display.serialNumber)")
+            
+            if display.isLGOLED42 {
+                Logger.shared.info("    ✅ LG OLED 42\" detected - optimizations enabled")
+            }
+            
+            if let year = display.manufactureYear, let week = display.manufactureWeek {
+                Logger.shared.debug("    Manufactured: Week \(week), \(year)")
+            }
+        }
     }
     
     private func setupDisplayReconfigurationCallback() {

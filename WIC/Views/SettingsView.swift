@@ -303,18 +303,53 @@ struct DisplayRow: View {
         HStack {
             Image(systemName: display.isVertical ? "rectangle.portrait" : "rectangle")
                 .font(.largeTitle)
-                .foregroundColor(.blue)
+                .foregroundColor(display.isLGOLED42 ? .green : .blue)
                 .frame(width: 60)
             
             VStack(alignment: .leading, spacing: 5) {
-                Text(display.name)
+                Text(display.fullDescription)
                     .font(.headline)
+                
+                if display.isLGOLED42 {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("LG OLED 42\" — Optimized")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                            .fontWeight(.semibold)
+                    }
+                }
                 
                 Text("Разрешение: \(Int(display.frame.width)) × \(Int(display.frame.height))")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                Text("Ориентация: \(display.isVertical ? "Вертикальная" : "Горизонтальная")")
+                HStack {
+                    Text("Производитель: \(display.vendorName)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    if !display.modelName.isEmpty {
+                        Text("• \(display.modelName)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                HStack {
+                    Text("ID: 0x\(String(format: "%04X", display.productID))")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    if let year = display.manufactureYear {
+                        Text("• Год: \(year)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Text("Ориентация: \(display.isVertical ? "Вертикальная ↕️" : "Горизонтальная ↔️")")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -322,8 +357,12 @@ struct DisplayRow: View {
             Spacer()
         }
         .padding()
-        .background(Color.secondary.opacity(0.05))
+        .background(display.isLGOLED42 ? Color.green.opacity(0.08) : Color.secondary.opacity(0.05))
         .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(display.isLGOLED42 ? Color.green.opacity(0.3) : Color.clear, lineWidth: 2)
+        )
     }
 }
 
