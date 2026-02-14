@@ -453,6 +453,24 @@ class WindowManager: ObservableObject {
             applyBackendApiModeLayout(windows: windows, in: visibleFrame)
         case .desktopAppDevMode:
             applyDesktopAppDevModeLayout(windows: windows, in: visibleFrame)
+        
+        // Bentobox-Style Grid Layouts
+        case .bentobox2x2:
+            applyBentobox2x2Layout(windows: windows, in: visibleFrame)
+        case .bentobox3x3:
+            applyBentobox3x3Layout(windows: windows, in: visibleFrame)
+        case .bentoboxAsymmetric1:
+            applyBentoboxAsymmetric1Layout(windows: windows, in: visibleFrame)
+        case .bentoboxAsymmetric2:
+            applyBentoboxAsymmetric2Layout(windows: windows, in: visibleFrame)
+        case .bentoboxColumns3:
+            applyBentoboxColumns3Layout(windows: windows, in: visibleFrame)
+        case .bentoboxGolden:
+            applyBentoboxGoldenLayout(windows: windows, in: visibleFrame)
+        case .bentoboxMasonry:
+            applyBentoboxMasonryLayout(windows: windows, in: visibleFrame)
+        case .bentoboxPIP:
+            applyBentoboxPIPLayout(windows: windows, in: visibleFrame)
             }
             
             // Critical: Validate all window positions to ensure they stay within screen bounds
@@ -2859,6 +2877,324 @@ class WindowManager: ObservableObject {
         safeFrame.size.height = min(frame.height, screenBounds.height)
         
         AccessibilityHelper.setWindowFrame(window, to: safeFrame)
+    }
+    
+    // MARK: - Bentobox-Style Grid Layouts
+    
+    /// Bentobox 2x2: Classic 4-quadrant equal grid
+    /// Perfect for comparing 4 documents or apps side by side
+    private func applyBentobox2x2Layout(windows: [AXUIElement], in frame: CGRect) {
+        Logger.shared.debug("Applying Bentobox 2x2 grid layout")
+        
+        let padding: CGFloat = snapSettings.gridPadding
+        let halfWidth = (frame.width - padding * 3) / 2
+        let halfHeight = (frame.height - padding * 3) / 2
+        
+        let positions = [
+            CGRect(x: frame.minX + padding, y: frame.minY + halfHeight + padding * 2, width: halfWidth, height: halfHeight),
+            CGRect(x: frame.minX + halfWidth + padding * 2, y: frame.minY + halfHeight + padding * 2, width: halfWidth, height: halfHeight),
+            CGRect(x: frame.minX + padding, y: frame.minY + padding, width: halfWidth, height: halfHeight),
+            CGRect(x: frame.minX + halfWidth + padding * 2, y: frame.minY + padding, width: halfWidth, height: halfHeight)
+        ]
+        
+        for (index, window) in windows.enumerated() {
+            let posIndex = index % positions.count
+            AccessibilityHelper.setWindowFrame(window, to: positions[posIndex])
+        }
+    }
+    
+    /// Bentobox 3x3: Compact 9-window grid for maximum density
+    private func applyBentobox3x3Layout(windows: [AXUIElement], in frame: CGRect) {
+        Logger.shared.debug("Applying Bentobox 3x3 grid layout")
+        
+        let padding: CGFloat = snapSettings.gridPadding
+        let cellWidth = (frame.width - padding * 4) / 3
+        let cellHeight = (frame.height - padding * 4) / 3
+        
+        for (index, window) in windows.enumerated() {
+            let col = index % 3
+            let row = 2 - (index / 3) % 3  // Start from top
+            
+            let windowFrame = CGRect(
+                x: frame.minX + padding + CGFloat(col) * (cellWidth + padding),
+                y: frame.minY + padding + CGFloat(row) * (cellHeight + padding),
+                width: cellWidth,
+                height: cellHeight
+            )
+            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+        }
+    }
+    
+    /// Bentobox Asymmetric 1: One large (2x2) + three small windows
+    /// Focus on main content with auxiliary windows on the side
+    private func applyBentoboxAsymmetric1Layout(windows: [AXUIElement], in frame: CGRect) {
+        Logger.shared.debug("Applying Bentobox Asymmetric 1 layout (1 large + 3 small)")
+        
+        guard !windows.isEmpty else { return }
+        
+        let padding: CGFloat = snapSettings.gridPadding
+        let mainWidth = frame.width * 0.667  // 2/3 for main window
+        let sideWidth = frame.width - mainWidth - padding * 3
+        let sideHeight = (frame.height - padding * 4) / 3
+        
+        // Main large window (left, 2x2)
+        let mainFrame = CGRect(
+            x: frame.minX + padding,
+            y: frame.minY + padding,
+            width: mainWidth,
+            height: frame.height - padding * 2
+        )
+        AccessibilityHelper.setWindowFrame(windows[0], to: mainFrame)
+        
+        // Three small windows stacked on the right
+        if windows.count > 1 {
+            let sideWindows = Array(windows[1...min(3, windows.count - 1)])
+            for (index, window) in sideWindows.enumerated() {
+                let windowFrame = CGRect(
+                    x: frame.minX + mainWidth + padding * 2,
+                    y: frame.minY + padding + CGFloat(index) * (sideHeight + padding),
+                    width: sideWidth,
+                    height: sideHeight
+                )
+                AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            }
+        }
+        
+        // If more than 4 windows, tile remaining ones
+        if windows.count > 4 {
+            let remaining = Array(windows[4...])
+            let remainingHeight = frame.height / CGFloat(remaining.count)
+            for (index, window) in remaining.enumerated() {
+                let windowFrame = CGRect(
+                    x: frame.minX + mainWidth + padding * 2,
+                    y: frame.minY + CGFloat(index) * remainingHeight,
+                    width: sideWidth,
+                    height: remainingHeight
+                )
+                AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            }
+        }
+    }
+    
+    /// Bentobox Asymmetric 2: Two large windows on top + two small on bottom
+    /// Balanced viewing for comparing two main items with references below
+    private func applyBentoboxAsymmetric2Layout(windows: [AXUIElement], in frame: CGRect) {
+        Logger.shared.debug("Applying Bentobox Asymmetric 2 layout (2 large + 2 small)")
+        
+        guard !windows.isEmpty else { return }
+        
+        let padding: CGFloat = snapSettings.gridPadding
+        let topHeight = frame.height * 0.667  // 2/3 for top windows
+        let bottomHeight = frame.height - topHeight - padding * 3
+        let halfWidth = (frame.width - padding * 3) / 2
+        
+        // Top two large windows
+        if windows.count >= 1 {
+            AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+                x: frame.minX + padding,
+                y: frame.minY + bottomHeight + padding * 2,
+                width: halfWidth,
+                height: topHeight
+            ))
+        }
+        
+        if windows.count >= 2 {
+            AccessibilityHelper.setWindowFrame(windows[1], to: CGRect(
+                x: frame.minX + halfWidth + padding * 2,
+                y: frame.minY + bottomHeight + padding * 2,
+                width: halfWidth,
+                height: topHeight
+            ))
+        }
+        
+        // Bottom two small windows
+        if windows.count >= 3 {
+            AccessibilityHelper.setWindowFrame(windows[2], to: CGRect(
+                x: frame.minX + padding,
+                y: frame.minY + padding,
+                width: halfWidth,
+                height: bottomHeight
+            ))
+        }
+        
+        if windows.count >= 4 {
+            AccessibilityHelper.setWindowFrame(windows[3], to: CGRect(
+                x: frame.minX + halfWidth + padding * 2,
+                y: frame.minY + padding,
+                width: halfWidth,
+                height: bottomHeight
+            ))
+        }
+        
+        // Additional windows cycle through the 4 positions
+        if windows.count > 4 {
+            for index in 4..<windows.count {
+                let posIndex = index % 4
+                let positions = [
+                    CGRect(x: frame.minX + padding, y: frame.minY + bottomHeight + padding * 2, width: halfWidth, height: topHeight),
+                    CGRect(x: frame.minX + halfWidth + padding * 2, y: frame.minY + bottomHeight + padding * 2, width: halfWidth, height: topHeight),
+                    CGRect(x: frame.minX + padding, y: frame.minY + padding, width: halfWidth, height: bottomHeight),
+                    CGRect(x: frame.minX + halfWidth + padding * 2, y: frame.minY + padding, width: halfWidth, height: bottomHeight)
+                ]
+                AccessibilityHelper.setWindowFrame(windows[index], to: positions[posIndex])
+            }
+        }
+    }
+    
+    /// Bentobox Columns 3: Three equal vertical columns
+    /// Perfect for documents, code, and terminal side by side
+    private func applyBentoboxColumns3Layout(windows: [AXUIElement], in frame: CGRect) {
+        Logger.shared.debug("Applying Bentobox 3 Columns layout")
+        
+        let padding: CGFloat = snapSettings.gridPadding
+        let columnWidth = (frame.width - padding * 4) / 3
+        
+        for (index, window) in windows.enumerated() {
+            let col = index % 3
+            let row = index / 3
+            let rowsInColumn = (windows.count + 2) / 3
+            let cellHeight = (frame.height - padding * CGFloat(rowsInColumn + 1)) / CGFloat(rowsInColumn)
+            
+            let windowFrame = CGRect(
+                x: frame.minX + padding + CGFloat(col) * (columnWidth + padding),
+                y: frame.minY + padding + CGFloat(row) * (cellHeight + padding),
+                width: columnWidth,
+                height: cellHeight
+            )
+            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+        }
+    }
+    
+    /// Bentobox Golden: Grid based on golden ratio (φ ≈ 1.618)
+    /// Mathematically optimal proportions for visual harmony
+    private func applyBentoboxGoldenLayout(windows: [AXUIElement], in frame: CGRect) {
+        Logger.shared.debug("Applying Bentobox Golden Ratio layout")
+        
+        guard !windows.isEmpty else { return }
+        
+        let phi: CGFloat = 1.618033988749895  // Golden ratio
+        let padding: CGFloat = snapSettings.gridPadding
+        
+        // Split screen using golden ratio: 61.8% + 38.2%
+        let mainWidth = frame.width / phi
+        let sideWidth = frame.width - mainWidth - padding * 3
+        
+        // Main window (golden rectangle)
+        AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+            x: frame.minX + padding,
+            y: frame.minY + padding,
+            width: mainWidth,
+            height: frame.height - padding * 2
+        ))
+        
+        // Side windows split by golden ratio
+        if windows.count > 1 {
+            let sideWindows = Array(windows[1...])
+            let topHeight = (frame.height - padding * 3) / phi
+            let bottomHeight = frame.height - topHeight - padding * 3
+            
+            for (index, window) in sideWindows.enumerated() {
+                if index == 0 {
+                    // First side window (top, larger)
+                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                        x: frame.minX + mainWidth + padding * 2,
+                        y: frame.minY + bottomHeight + padding * 2,
+                        width: sideWidth,
+                        height: topHeight
+                    ))
+                } else if index == 1 {
+                    // Second side window (bottom, smaller)
+                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                        x: frame.minX + mainWidth + padding * 2,
+                        y: frame.minY + padding,
+                        width: sideWidth,
+                        height: bottomHeight
+                    ))
+                } else {
+                    // Additional windows stack in the smaller section
+                    let extraHeight = bottomHeight / CGFloat(sideWindows.count - 1)
+                    AccessibilityHelper.setWindowFrame(window, to: CGRect(
+                        x: frame.minX + mainWidth + padding * 2,
+                        y: frame.minY + padding + CGFloat(index - 1) * extraHeight,
+                        width: sideWidth,
+                        height: extraHeight
+                    ))
+                }
+            }
+        }
+    }
+    
+    /// Bentobox Masonry: Pinterest-style adaptive brick layout
+    /// Windows of varying sizes create an organic, magazine-style grid
+    private func applyBentoboxMasonryLayout(windows: [AXUIElement], in frame: CGRect) {
+        Logger.shared.debug("Applying Bentobox Masonry layout")
+        
+        guard !windows.isEmpty else { return }
+        
+        let padding: CGFloat = snapSettings.gridPadding
+        let columns = min(3, max(2, windows.count))
+        let columnWidth = (frame.width - padding * CGFloat(columns + 1)) / CGFloat(columns)
+        
+        // Track heights of each column for masonry effect
+        var columnHeights = Array(repeating: frame.minY + padding, count: columns)
+        
+        // Assign windows to columns with varying heights
+        for (index, window) in windows.enumerated() {
+            // Find shortest column
+            let shortestColumn = columnHeights.enumerated().min(by: { $0.element < $1.element })?.offset ?? 0
+            
+            // Vary window heights for masonry effect
+            let heightVariants: [CGFloat] = [0.3, 0.4, 0.5, 0.6]
+            let heightMultiplier = heightVariants[index % heightVariants.count]
+            let windowHeight = frame.height * heightMultiplier
+            
+            let windowFrame = CGRect(
+                x: frame.minX + padding + CGFloat(shortestColumn) * (columnWidth + padding),
+                y: columnHeights[shortestColumn],
+                width: columnWidth,
+                height: windowHeight
+            )
+            
+            AccessibilityHelper.setWindowFrame(window, to: windowFrame)
+            columnHeights[shortestColumn] += windowHeight + padding
+        }
+    }
+    
+    /// Bentobox PIP: Picture-in-Picture style
+    /// Main window with smaller windows in corners
+    private func applyBentoboxPIPLayout(windows: [AXUIElement], in frame: CGRect) {
+        Logger.shared.debug("Applying Bentobox Picture-in-Picture layout")
+        
+        guard !windows.isEmpty else { return }
+        
+        let padding: CGFloat = 20
+        let pipWidth = frame.width * 0.25   // PIP windows are 25% of screen width
+        let pipHeight = frame.height * 0.25
+        
+        // Main window (slightly inset to show it's not fullscreen)
+        let mainInset: CGFloat = 10
+        AccessibilityHelper.setWindowFrame(windows[0], to: CGRect(
+            x: frame.minX + mainInset,
+            y: frame.minY + mainInset,
+            width: frame.width - mainInset * 2,
+            height: frame.height - mainInset * 2
+        ))
+        
+        // PIP windows in corners
+        if windows.count > 1 {
+            let pipPositions = [
+                CGRect(x: frame.maxX - pipWidth - padding, y: frame.maxY - pipHeight - padding, width: pipWidth, height: pipHeight),  // Top-right
+                CGRect(x: frame.minX + padding, y: frame.maxY - pipHeight - padding, width: pipWidth, height: pipHeight),              // Top-left
+                CGRect(x: frame.maxX - pipWidth - padding, y: frame.minY + padding, width: pipWidth, height: pipHeight),               // Bottom-right
+                CGRect(x: frame.minX + padding, y: frame.minY + padding, width: pipWidth, height: pipHeight)                           // Bottom-left
+            ]
+            
+            let pipWindows = Array(windows[1...])
+            for (index, window) in pipWindows.enumerated() {
+                let posIndex = index % pipPositions.count
+                AccessibilityHelper.setWindowFrame(window, to: pipPositions[posIndex])
+            }
+        }
     }
 }
 

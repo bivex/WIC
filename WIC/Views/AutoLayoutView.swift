@@ -150,6 +150,30 @@ struct AutoLayoutView: View {
                                 )
                             }
                         }
+                        
+                        Divider()
+
+                        // Bentobox Grid Layouts
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "square.grid.3x3.fill")
+                                    .foregroundColor(.green)
+                                Text("🍱 Bentobox Grid Layouts")
+                                    .font(.headline)
+                                    .foregroundColor(.green)
+                            }
+                            .padding(.bottom, 4)
+
+                            ForEach(AutoLayoutType.allCases.filter { $0.category == "🍱 Bentobox Grid Layouts" }) { layoutType in
+                                AutoLayoutOptionCard(
+                                    layoutType: layoutType,
+                                    isSelected: selectedLayout == layoutType,
+                                    action: {
+                                        selectedLayout = layoutType
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
                 
@@ -279,6 +303,17 @@ struct AutoLayoutView: View {
                         HelpRow(icon: "square.on.square.dashed", text: "Active Set: QP-решатель для активных ограничений")
                         HelpRow(icon: "waveform.path", text: "Linear Relaxation: Метод Гаусса-Зейделя с релаксацией")
                         HelpRow(icon: "triangle", text: "Constraint Simplex: LP-оптимизация по вершинам")
+                    }
+                    
+                    // Подсказки для Bentobox режимов
+                    if selectedLayout.category == "🍱 Bentobox Grid Layouts" {
+                        Divider()
+                        HelpRow(icon: "square.grid.3x3", text: "Bentobox: Сеточные раскладки в японском стиле")
+                        HelpRow(icon: "square.grid.2x2", text: "2×2: Классическая сетка из 4 равных окон")
+                        HelpRow(icon: "square.grid.3x3", text: "3×3: Компактная сетка до 9 окон одновременно")
+                        HelpRow(icon: "rectangle.split.3x1.fill", text: "Asymmetric: Фокус на главном контенте + вспомогательные окна")
+                        HelpRow(icon: "rectangle.ratio.3.to.4", text: "Golden: Математически оптимальные пропорции (φ ≈ 1.618)")
+                        HelpRow(icon: "square.stack.3d.down.right", text: "Masonry: Адаптивная кирпичная кладка как в Pinterest")
                     }
                 }
                 .padding()

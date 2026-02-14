@@ -478,6 +478,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
     case frontendDevMode = "frontend_dev_mode"
     case backendApiMode = "backend_api_mode"
     case desktopAppDevMode = "desktop_app_dev_mode"
+    
+    // Bentobox-Style Grid Layouts
+    case bentobox2x2 = "bentobox_2x2"
+    case bentobox3x3 = "bentobox_3x3"
+    case bentoboxAsymmetric1 = "bentobox_asymmetric_1"  // 1 large + 3 small
+    case bentoboxAsymmetric2 = "bentobox_asymmetric_2"  // 2 large + 2 small
+    case bentoboxColumns3 = "bentobox_columns_3"         // 3 equal columns
+    case bentoboxGolden = "bentobox_golden"              // Golden ratio grid
+    case bentoboxMasonry = "bentobox_masonry"            // Pinterest-style
+    case bentoboxPIP = "bentobox_pip"                    // Picture-in-picture style
 
     var id: String { self.rawValue }
 
@@ -527,6 +537,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
         case .frontendDevMode: return "🎨 Frontend Development Hub"
         case .backendApiMode: return "⚙️ Backend/API Workshop"
         case .desktopAppDevMode: return "🖥️ Desktop App Development"
+        
+        // Bentobox-Style Layouts
+        case .bentobox2x2: return "🍱 Bentobox: 2×2 Grid"
+        case .bentobox3x3: return "🍱 Bentobox: 3×3 Grid"
+        case .bentoboxAsymmetric1: return "🍱 Bentobox: 1 Large + 3 Small"
+        case .bentoboxAsymmetric2: return "🍱 Bentobox: 2 Large + 2 Small"
+        case .bentoboxColumns3: return "🍱 Bentobox: 3 Columns"
+        case .bentoboxGolden: return "🍱 Bentobox: Golden Ratio"
+        case .bentoboxMasonry: return "🍱 Bentobox: Masonry"
+        case .bentoboxPIP: return "🍱 Bentobox: Picture-in-Picture"
         }
     }
 
@@ -611,6 +631,24 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Backend/API воркшоп: код (40%) + API тестер (30%) + база данных (20%) + логи/мониторинг (10%)"
         case .desktopAppDevMode:
             return "Desktop разработка: IDE (45%) + приложение/превью (35%) + отладчик/профайлер (15%) + документация (5%)"
+        
+        // Bentobox-Style Layouts
+        case .bentobox2x2:
+            return "Классическая сетка 2×2 с равными окнами. Идеально для сравнения 4 документов"
+        case .bentobox3x3:
+            return "Компактная сетка 3×3 для максимальной плотности. До 9 окон одновременно"
+        case .bentoboxAsymmetric1:
+            return "Одно большое окно (2×2) слева + три маленьких справа. Фокус на главном контенте"
+        case .bentoboxAsymmetric2:
+            return "Два больших окна сверху + два маленьких снизу. Балансированный просмотр"
+        case .bentoboxColumns3:
+            return "Три равные колонки на всю высоту. Идеально для документов и кода"
+        case .bentoboxGolden:
+            return "Сетка по золотому сечению. Математически оптимальные пропорции"
+        case .bentoboxMasonry:
+            return "Кирпичная кладка в стиле Pinterest. Адаптивные размеры окон"
+        case .bentoboxPIP:
+            return "Главное окно + маленькие окна в углах. Как picture-in-picture"
         }
     }
 
@@ -660,6 +698,16 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
         case .frontendDevMode: return "paintbrush.pointed.fill"
         case .backendApiMode: return "server.rack"
         case .desktopAppDevMode: return "laptopcomputer"
+        
+        // Bentobox-Style Layouts
+        case .bentobox2x2: return "square.grid.2x2"
+        case .bentobox3x3: return "square.grid.3x3"
+        case .bentoboxAsymmetric1: return "rectangle.split.3x1.fill"
+        case .bentoboxAsymmetric2: return "rectangle.split.2x1.fill"
+        case .bentoboxColumns3: return "rectangle.split.3x1"
+        case .bentoboxGolden: return "rectangle.ratio.3.to.4"
+        case .bentoboxMasonry: return "square.stack.3d.down.right"
+        case .bentoboxPIP: return "rectangle.inset.filled"
         }
     }
 
@@ -675,6 +723,8 @@ enum AutoLayoutType: String, CaseIterable, Identifiable {
             return "Premium Work Modes"
         case .fullStackDevMode, .mobileDevMode, .devOpsMode, .mlAiDevMode, .gameDevMode, .frontendDevMode, .backendApiMode, .desktopAppDevMode:
             return "Premium Programming Modes"
+        case .bentobox2x2, .bentobox3x3, .bentoboxAsymmetric1, .bentoboxAsymmetric2, .bentoboxColumns3, .bentoboxGolden, .bentoboxMasonry, .bentoboxPIP:
+            return "🍱 Bentobox Grid Layouts"
         }
     }
 }
