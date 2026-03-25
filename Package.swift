@@ -23,6 +23,8 @@ let package = Package(
                 "Managers/WindowManager.swift",
                 "Managers/HotkeyManager.swift",
                 "Helpers/AccessibilityHelper.swift",
+                "Helpers/GridLayoutCalculator.swift",
+                "Helpers/YabaiCompatibility.swift",
                 "Helpers/Logger.swift",
                 "Views/ContentView.swift",
                 "Views/SettingsView.swift",

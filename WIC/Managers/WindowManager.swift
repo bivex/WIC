@@ -303,15 +303,12 @@ class WindowManager: ObservableObject {
     
     private func setWindowFrame(_ window: AXUIElement, to frame: CGRect) {
         autoreleasepool {
-            // Использовать batch установку для уменьшения вызовов AX API
-            var position = CGPoint(x: frame.origin.x, y: frame.origin.y)
-            var size = CGSize(width: frame.size.width, height: frame.size.height)
-            
-            if let positionValue = AXValueCreate(.cgPoint, &position),
-               let sizeValue = AXValueCreate(.cgSize, &size) {
-                AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, positionValue)
-                AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
+            guard YabaiCompatibility.prepareWindowForManualFrameChange(window) else {
+                Logger.shared.warning("Skipping frame change because yabai keeps this window managed")
+                return
             }
+
+            _ = AccessibilityHelper.setWindowFrame(window, to: frame)
         }
     }
     
@@ -359,7 +356,7 @@ class WindowManager: ObservableObject {
             Logger.shared.info("Applying auto-layout: \(layoutType.displayName)")
             let timer = Logger.shared.startOperation("Auto Layout - \(layoutType.displayName)")
             
-            let windows = AccessibilityHelper.getAllWindows()
+            let windows = YabaiCompatibility.prepareWindowsForManualLayout(AccessibilityHelper.getAllWindows())
             guard !windows.isEmpty else {
                 Logger.shared.warning("No windows found for auto-layout")
                 return
@@ -484,7 +481,7 @@ class WindowManager: ObservableObject {
     
     /// Сбросить все окна в исходное состояние (центрировать)
     func resetAllWindows() {
-        let windows = AccessibilityHelper.getAllWindows()
+        let windows = YabaiCompatibility.prepareWindowsForManualLayout(AccessibilityHelper.getAllWindows())
         guard let screen = NSScreen.main else { return }
         
         let visibleFrame = screen.visibleFrame
@@ -511,26 +508,21 @@ class WindowManager: ObservableObject {
     private func applyGridLayout(windows: [AXUIElement], in frame: CGRect) {
         Logger.shared.debug("Applying grid layout to \(windows.count) windows")
         Logger.shared.debug("Using visibleFrame (excludes Dock/MenuBar): \(frame)")
-        let count = windows.count
-        let columns = Int(ceil(sqrt(Double(count))))
-        let rows = Int(ceil(Double(count) / Double(columns)))
-        Logger.shared.debug("Grid: \(columns)x\(rows)")
-        
-        // Используем настраиваемый отступ из настроек
         let padding = snapSettings.gridPadding
-        let bottomExtraPadding: CGFloat = 20 // Дополнительный отступ снизу для Dock
-        
-        let usableFrame = CGRect(
-            x: frame.minX + padding,
-            y: frame.minY + padding + bottomExtraPadding,
-            width: frame.width - padding * 2,
-            height: frame.height - padding * 2 - bottomExtraPadding
+        let layout = GridLayoutCalculator.calculate(
+            windowCount: windows.count,
+            in: frame,
+            padding: padding
         )
-        Logger.shared.debug("Added \(padding)px padding + \(bottomExtraPadding)px bottom, usable area: \(usableFrame)")
-        
-        let windowWidth = usableFrame.width / CGFloat(columns)
-        let windowHeight = usableFrame.height / CGFloat(rows)
-        Logger.shared.debug("Each window size: \(windowWidth) x \(windowHeight)")
+
+        Logger.shared.debug("Grid: \(layout.columns)x\(layout.rows)")
+        Logger.shared.debug(
+            "Added \(padding)px padding + \(GridLayoutCalculator.defaultBottomPadding)px bottom, usable area: \(layout.usableFrame)"
+        )
+
+        if let firstFrame = layout.frames.first {
+            Logger.shared.debug("Each window size starts at: \(firstFrame.width) x \(firstFrame.height)")
+        }
         
         // Batch process windows in groups to reduce memory pressure
         let batchSize = 5
@@ -541,15 +533,7 @@ class WindowManager: ObservableObject {
                 
                 for (index, window) in batch.enumerated() {
                     let globalIndex = batchStart + index
-                    let col = globalIndex % columns
-                    let row = globalIndex / columns
-                    
-                    let windowFrame = CGRect(
-                        x: usableFrame.minX + CGFloat(col) * windowWidth,
-                        y: usableFrame.minY + CGFloat(row) * windowHeight,
-                        width: windowWidth,
-                        height: windowHeight
-                    )
+                    let windowFrame = layout.frames[globalIndex]
                     
                     #if DEBUG
                     if globalIndex == 0 {
@@ -3197,4 +3181,3 @@ class WindowManager: ObservableObject {
         }
     }
 }
-
